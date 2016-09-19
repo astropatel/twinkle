@@ -11,3 +11,5 @@ More updates underway in the near future.
 Please message me for any comments on improvement or features anyone would like to see.
 
 NextGen and Kurucz photosphere models are currently the only ones incorporated into code. 
+
+Ipython Notebook for testing is under development.
