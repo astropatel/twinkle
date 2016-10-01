@@ -1,13 +1,20 @@
-import pdb, os, sys, operator, gzip, directories,sed
+import directories
+import gzip
 import math as ma
-import numpy as np
-from readcol import*
-from glob import glob
-import mosaic_tools as mt
-import scipy.interpolate as intp
-import scipy.integrate as sintp
-from astro_tools import Constants
 import matplotlib.pyplot as plt
+import numpy as np
+import operator
+import os
+import pdb
+import scipy.integrate as sintp
+import scipy.interpolate as intp
+import sed
+import sys
+from glob import glob
+
+import mosaic_tools as mt
+from astro_tools import Constants
+from readcol import*
 
 con = Constants()
 topdir = os.path.join(os.getcwd(), 'Interpolation_Files')

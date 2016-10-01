@@ -10,7 +10,7 @@
   from Matt Hilton (http://astlib.sourceforge.net/). Please cite as necessary.
 """
 
-import pdb, os, sys, operator, glob, directories, copy, pdb
+import os, operator, glob, directories, copy, pdb
 from math import *
 import numpy as np
 from readcol import *
@@ -647,7 +647,7 @@ class SEDTools:
                     lam_arr_all, flux_arr_all = FT.resample_model(lam_arr_all, flux_arr_all,
                                                                   min(pband.wavelength), max(pband.wavelength), \
                                                                   pband=pband)
-                    # pdb.set_trace()
+
                 Mflux = self.rsr_flux(pband, lam_arr_all, flux_arr_all)
                 yin = Mflux
                 # Interpolation object

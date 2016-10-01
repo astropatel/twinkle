@@ -16,7 +16,7 @@ import load_wfcorrection as lwf
 from mpl_toolkits.axes_grid1 import Grid
 import sed_paramfile as sp
 
-
+__author__ = 'Rahul I. Patel'
 #  =========================================================
 #     Definition to obtain Tbb assuming flux correction
 #  =========================================================
