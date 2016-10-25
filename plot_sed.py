@@ -2,7 +2,8 @@
 # ADJUSTMENT
 
 #  =========================================================
-import os, sed, pdb, sys, random, argparse, copy
+import os, sed, pdb, sys, random
+import argparse, copy, directories, json
 from time import gmtime, strftime
 import matplotlib.pyplot as plt, numpy as np
 import matplotlib.ticker as mtick, math as ma
@@ -16,7 +17,7 @@ import load_wfcorrection as lwf
 from mpl_toolkits.axes_grid1 import Grid
 import sed_paramfile as sp
 
-__author__ = 'Rahul I. Patel'
+__author__ = 'Rahul I. Patel <ri.patel272@gmail.com>'
 #  =========================================================
 #     Definition to obtain Tbb assuming flux correction
 #  =========================================================
@@ -81,10 +82,10 @@ def plot_blackbody(ax, wave, ExcessFlux, dust_lambda, lightW4_line, a2m, ptsz, l
         if Exbool_Dict[key]:
             ax.errorbar(wave[key] * a2m, val * wave[key], \
                         yerr=0.7 * val * wave[key], uplims=True, ecolor='red', \
-                        capsize=5, elinewidth=2, capthick=2)
+                        capsize=5, elinewidth=5, capthick=2)
         else:
             ax.errorbar(wave[key] * a2m, val * wave[key], yerr=ExcessFluxerr[key] * wave[key], \
-                        label='Observed-Photosphere', fmt='mD', capsize=2, ms=ptsz, mfc='white', mec='magenta',
+                        label='Observed-Photosphere', fmt='mD', capsize=10, ms=ptsz, mfc='white', mec='magenta',
                         mew=1.5)
     return
 
@@ -265,8 +266,11 @@ sptST, teffST, logLST = dfbvst['SpT'], dfbvst['Teff'], dfbvst['logL']
 # =======================================================================================
 #                                  DATA
 # =======================================================================================
-SEDLOG = sed.SEDLogistics(sp.f_read, changekeys=True)
-stdat = SEDLOG.stardat
+script = open('/Users/rpatel/Dropbox/Research/sed_paramfile.json').read()
+specs_from_file = json.loads(script)
+
+sed.DataLogistics(specs_from_file, changekeys=True)
+stdat = sed.StarsDat
 
 star_arr = stdat['MainName']
 plx = stdat['plx']
@@ -344,7 +348,7 @@ for i, useind in enumerate(f_ind):
     T0 = stdat['temp'][i] / 1000.
     disti = dist[i]
 
-    SOBJ = sed.StarObject(SEDLOG.stardat, i)
+    SOBJ = sed.StarObject(stdat, i)
     # (1/Dist)^2 factor to be multiplied with Radius^2. Unitless.
     # Takes into account solar units, so radius only needs to be in solar units
     # This is to facilitate the fitting procedure.
@@ -374,9 +378,9 @@ for i, useind in enumerate(f_ind):
 
     Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
-    # Spectral type check: Don't use listed mags in spRemove_RedStars
+    #  Spectral type check: Don't use listed mags in spRemove_RedStars
     #  modulize this afterwards.
-    SPTcheck = spti[0]
+    #  SPTcheck = spti[0]
     if stdat['NoOptical'][i] == 'Yes':
         for arr in Photometry_spCheckList:
             for mv in sp.Remove_RedStars:
@@ -419,14 +423,16 @@ for i, useind in enumerate(f_ind):
     #  =====================================================================================
 
     modeltype = (modeli,g,met)
-    mfitlist = {'photmags':SOBJ.mags4Phot,
+    mfitlist = {'photmags':mags4Phot0,
                 'scalemags':SOBJ.mags4scale}
     rawfluxdat = (flux,fluxerr)
-    STools.fit_photosphere(wave, rawfluxdat, p0, su2ea2,
+
+    fit_dat = STools.fit_photosphere(wave, rawfluxdat, p0, su2ea2,
                            modeltype, mfitlist, STools.calc_grids)
 
-    radius, tempnew = STools.radius, STools.tempnew
+    radius, tempnew = fit_dat[0],fit_dat[1]
     p0 = [round(tempnew) / 1.e3, radius]
+    #p0 = [8840./ 1.e3, radius]
     #  =====================================================================================
     #                    Calculate Photosphere Line
     #  =====================================================================================
@@ -434,11 +440,11 @@ for i, useind in enumerate(f_ind):
     # FULL BBODY - ANGSTROMS
     # set conv = 1/_ang2micron
     # convert input wavelength into angstrom
-
-    photline_dat = STools.photosphere(p0, su2ea2, STools.griddata, STools.tempArr,
-                                      wave=(wave_min, wave_max),gridpts=sp.gridpts)
     # XPHOT: Angstrom, YPHOT: erg s^-1 cm^-2 A^-1, same with slope and yint
-    xphot, yphot = photline_dat[0], photline_dat[1]
+    xphot, yphot = STools.photosphere(p0, su2ea2, modeli,
+                                      wave=(wave_min, wave_max),gridpts=sp.gridpts)
+
+
 
 
     # **********************************************************************************
@@ -451,7 +457,8 @@ for i, useind in enumerate(f_ind):
         flxt = STools.rsr_flux(eval('STools.%spband' % band), xphot, yphot)[0]
         synpFlux['%s' % band] = flxt
 
-    dat = STools.scaleSED2bands(sp.scaleSEDbands, SOBJ.mags2use, yphot, flux, fluxerr, synpFlux)
+    dat = STools.scaleSED2bands(sp.scaleSEDbands, SOBJ.mags2use, yphot,
+                                flux, fluxerr, synpFlux)
     norm_wise_nir, yphot, yphot_unsc, RJ_On = dat
 
     # **********************************************************************************
@@ -482,8 +489,8 @@ for i, useind in enumerate(f_ind):
     W3Excess_bool = False
     i_other = int(useind)
     # CHECK IF THERE ARE LONGER WAVELENGTH FLUXES TO FIT THE SED WITH
-    if SEDLOG.stardat['OtherFlux'][i_other] != 'None' and sp.Longwave_Bool:
-        OtherBands = OtherFlux[i_other]
+    if stdat['OtherFlux'][i_other] != 'None' and sp.Longwave_Bool:
+        OtherBands = stdat['OtherFlux'][i_other]
         band_split = OtherBands.split(',')  # ARRAY WITH NAMES FOR BANDS TO BE ADDED
 
         for band in band_split:
@@ -564,7 +571,7 @@ for i, useind in enumerate(f_ind):
         sp.Exfunc = 'blackbody'
 
     else:
-        tmin, tmax = 10, SEDLOG.stardat['temp'][i]
+        tmin, tmax = 10, stdat['temp'][i]
         # SORT BY WAVELENGTH INCREASING
         sortedBands = np.array(sorted(Lam_Excess.items(), key=lambda x: x[1]))
         bandSorted = sortedBands[:, 0]
@@ -1095,7 +1102,7 @@ for i, useind in enumerate(f_ind):
             #  ==============================================================================================
 
             xi, yi = xphot, fullspectrum
-            plot_observedData(ax, SOBJ.mags4Phot, xi, yi, wave, flux,
+            plot_observedData(ax, mags4Phot0, xi, yi, wave, flux,
                               fluxerr, _ang2micron, ptsize, cps, 1)
 
             #  ==============================================================================================

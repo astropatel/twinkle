@@ -79,13 +79,13 @@ xmax = 150
 #=======================================================
 wave_min = 0.2 #microns
 wave_max = 4000.0 #microns
-gridpts = 10000 #RESOLUTION OF SED
+gridpts = 1000 #RESOLUTION OF SED
 
 #=======================================================
 #  ADOPTION OF W2 AND W3 INTO PHOT MODEL FLAGS
 #=======================================================
-W3Adapt = False
-W2Adapt = False
+W3Adapt = True
+W2Adapt = True
 
 #=======================================================
 #      LAM>30 MICRON ACTIVATION BOOLEAN
@@ -111,8 +111,8 @@ mags4scale0_original = ['BJ','VJ','J2M','H2M','Ks2M','W1']
 mags4Dust0  = ['W3','W4']
 
 # BANDS USED TO SCALE SED
-#scaleSEDbands = ['W1','W2']
-scaleSEDbands = []
+scaleSEDbands = ['W1','W2']
+#scaleSEDbands = ['W3']
 
 # PHOTOMETRY THAT NEEDS TO BE DISCARDED THAT MIGHT BE SUBJECT TO VARIABILITY -- TYPICALLY LATE K AND M STARS
 # CURRENTLY USES COLUMN "NOOPTICAL" FOR EACH STAR TO DETERMINE WHICH STAR THIS APPLIES TO

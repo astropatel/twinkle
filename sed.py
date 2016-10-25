@@ -8,9 +8,13 @@
   modules to calculate simple blackbody and photospheric grid fluxes.
   Parts of class Bandpass were taken from astLib with permission
   from Matt Hilton (http://astlib.sourceforge.net/). Please cite as necessary.
+
+  Issues and changes that need to be made:
+  1. Remove mpfit and use internal scipy fitting routine.
+  2. vega2AB needs to be updated or deprecated.
 """
 
-import os, operator, glob, directories, copy, pdb
+import os, operator, glob, directories
 from math import *
 import numpy as np
 from readcol import *
@@ -18,22 +22,29 @@ import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
 from astro_tools import Constants
-import sed_paramfile as sp
 try:
     from astropy.io import fits as pyfits
+    from astropy.io import ascii
 except ImportError:
-    print 'No fits reading module was detected.'
+    print 'No astropy module was detected.'
 
 __author__ = 'Rahul I. Patel, Joe Trollo'
 con = Constants()
+DIR = directories
 
-topdir = os.path.join(os.getcwd(), 'Interpolation_Files')
-fRSR = os.path.join(topdir, 'RSR')
+intpdir = DIR.Interpolation_Files()
+fRSR = DIR.RSR()
 AT = mt.ArrayTools()
 FT = mt.FittingTools()
 
 #  DICTIONARY TO HOUSE ALL THE PHOTOSPHERIC MODELS EVENTUALLY
 MegaGrid = {}
+
+#  DICTIONARY THAT CONTAINS ALL THE EMPIRICAL STELLAR COLOR DATA
+EmpDat = {}
+
+#  DICTIONARY THAT CONTAINS ALL DATA FROM A DATA INPUT FILE
+StarsDat = {}
 
 
 class SEDTools:
@@ -45,10 +56,9 @@ class SEDTools:
 
     def __init__(self):
 
-        # topdir = os.path.join(os.getcwd(), 'Interpolation_Files')
-        # fRSR = os.path.join(topdir, 'RSR')
+        # intpdir = os.path.join(os.getcwd(), 'Interpolation_Files')
+        # fRSR = os.path.join(intpdir, 'RSR')
         self.create_passbands()
-        # AT = mt.ArrayTools()
 
     def create_passbands(self, RSRFile=None, flat=False, waverange=(None, None), cntr=None):
         """
@@ -59,7 +69,7 @@ class SEDTools:
          You can serparately enter the RSRFile name along with wavelength units
          to create your own passband object. Above rules apply.
          Wavelength is automatically converted to Angstroms.
-         
+
          Parameters:
          -----------
          RSRFile : str
@@ -120,6 +130,8 @@ class SEDTools:
             u = units['IRAS']
             self.IRAS60pband = aspband(os.path.join(fRSR, '60_IRAS.dat'), inputUnits=u)
             self.IRAS100pband = aspband(os.path.join(fRSR, '100_IRAS.dat'), inputUnits=u)
+            self.IRAS25pband = aspband(os.path.join(fRSR,'25_IRAS.dat'), inputUnits=u)
+            self.IRAS12pband = aspband(os.path.join(fRSR,'12_IRAS.dat'), inputUnits=u)
 
             u = units['HPACS']
             self.HPACS70pband = aspband(os.path.join(fRSR, '70_HPACS.dat'), inputUnits=u)
@@ -127,9 +139,11 @@ class SEDTools:
             self.HPACS160pband = aspband(os.path.join(fRSR, '160_HPACS.dat'), inputUnits=u)
             return
         elif RSRFile is not None and not flat:
-            self.pband = aspband(os.path.join(fRSR, RSRFile), inputUnits, inputUnits=u)
+            self.pband = aspband(os.path.join(fRSR, RSRFile), inputUnits=u)
         elif flat:
             self.pband = Flatbandpass(waverange, cntr)
+
+        return
 
     def cgs2Jy(self, wave=None, nu=None, flux=None):
         """To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
@@ -174,8 +188,6 @@ class SEDTools:
         A tuple with the flux and conversion error (Flux, dFlux) in erg/s/cm2.
         If no errors are given, dFlux = None
         """
-        cs = con._celeritas * con._cm2ang
-        #  pdb.set_trace()
         nu, flux = np.asarray(nuFnu[0]), np.asarray(nuFnu[1])  # 2 ELEMENT TUPLE
         y = (flux * nu) / 1e23
 
@@ -224,6 +236,9 @@ class SEDTools:
         I.e., AB = -2.5 log(f_cgs) - 48.6 ,
         such that for any bandpass or filter, the zero point mag
         corresponds to a flux density of 3631 Jy.
+
+        Parameters:
+        -----------
 
         system: string. Instrument/basis used for photometry (eg. WISE, 2MASS, Johnson)
                 currently supports WISE, 2MASS, Johnson
@@ -280,8 +295,8 @@ class SEDTools:
          Converts all the vega magnitudes in vegaMag
          and associated errors in vegaMagErr to AB magnitudes.
 
-         Input:
-         --------
+        Parameters:
+        -----------
          mag_list (list): List of strings with passband name
          vegaMag,+Err (Dictionary): Vega magnitudes in mag_list
 
@@ -314,6 +329,7 @@ class SEDTools:
         """
         Does the same thing as batch_mag2flux except only takes one band
         and can be applied to multiple measurements in the same band to produce a flux
+
         """
 
         fluxJy = (10 ** 23.0) * 10 ** (-(abmags + 48.6) / 2.5)  # converts to AB Mag
@@ -373,14 +389,14 @@ class SEDTools:
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         mag_lam = -2.5 * np.log10(flux / Fiso)
         mag_lam_err = (1. / Fiso) * (-2.5 / log(10)) * fluxErr / 10 ** (mag_lam / -2.5)
-        return [mag_lam, mag_lam_err]
+        return mag_lam, mag_lam_err
 
     def mag2fluxZPLam(self, band, Vmag, VmagErr, sysErr=False):
         """Converts the input vega magnitude to specific flux in ergs/cm^2/s/Angstrom using the
         zero point fluxes obtained from the passband file from literature.
 
-        Input:
-        -------
+        Parameters:
+        -----------
         band: passband object
         Vmag: (float) Vega magnitude
         VmagErr: (float) error associated with Vega Magnitude)
@@ -404,15 +420,15 @@ class SEDTools:
 
         dFlux_lam = 10 ** (Vmag / -2.5) * np.sqrt(df_l1 ** 2 + df_l2 ** 2)
 
-        return [Flux_lam, dFlux_lam]
+        return Flux_lam, dFlux_lam
 
     def mag2fluxZPNu(self, band, Vmag, VmagErr, sysErr=False):
         """Converts the input vega magnitude to specific flux in ergs/cm^2/s/Hz using the
         zero point fluxes obtained from the passband file from literature. For this module,
         the zero point fluxes in frequency need to be there otherwise this won't work.
 
-        Input:
-        --------
+        Parameters:
+        -----------
         band: passband object
         Vmag: (float) Vega magnitude
         VmagErr: (float) error associated with Vega Magnitude)
@@ -438,7 +454,7 @@ class SEDTools:
 
         dFlux_nu = 10 ** (Vmag / -2.5) * sqrt(df_l1 ** 2 + df_l2 ** 2)
 
-        return [Flux_nu, dFlux_nu]
+        return Flux_nu, dFlux_nu
 
     def batch_mag2fluxZPLam(self, band_list, Vmags, Vmagserr):
         """Converts mag to flux using mag2fluxZP using zero point fluxs.
@@ -465,23 +481,23 @@ class SEDTools:
 
         return (fluxDict, fluxDict_err)
 
-    def rsr_flux(self, pband, lambda_, flux, bulk=False):
+    def rsr_flux(self, pband, lambda_, flux):
         """Calculates integreated flux filtered through a passband object
 
-           Input:
-           -------
+        Parameters:
+        -----------
 
-           pband: passband object for a given photometric band created
-                  from Bandpass class
-           lambda_: (Array) Wavelength in Angstroms range of flux to
-                    be calculated. Range should be atleast the extent of pband
-           flux: (Array) Flux mapped to lambda_ in erg s^-1 cm^-2?
+       pband: passband object for a given photometric band created
+              from Bandpass class
+       lambda_: (Array) Wavelength in Angstroms range of flux to
+                be calculated. Range should be atleast the extent of pband
+       flux: (Array) Flux mapped to lambda_ in erg s^-1 cm^-2?
 
-           Return:
-           -------
-           Integrated flux over the specified bandpass as float or array. Integration is
-           done using Simpson's rule for integration such that:
-           Integrated Flux = Integral(Flux*RSR*lam * dlam)/ Integral(RSR*lam*dlam)
+       Return:
+       -------
+       Integrated flux over the specified bandpass as float or array. Integration is
+       done using Simpson's rule for integration such that:
+       Integrated Flux = Integral(Flux*RSR*lam * dlam)/ Integral(RSR*lam*dlam)
         """
 
         # FIND THE BOUNDS FOR THE WAVELENGHTS IN THIS PARTICULAR BAND
@@ -518,7 +534,6 @@ class SEDTools:
             lam02, RSRNew = lam0, RSRNew
 
             RSRNew = RSRNew[indu]
-            # pdb.set_trace()
             Sn = sintp.simps(flx0 * lam0 * RSRNew, lam0) / sintp.simps(lam0 * RSRNew, lam0)
 
             Sn_arr = np.append(Sn_arr, Sn)
@@ -548,7 +563,6 @@ class SEDTools:
                 Sn = sintp.simps(flx0i * lam0i * RSRNew, lam0i) / sintp.simps(lam0i * RSRNew, lam0i)
 
                 if np.isnan(np.sum(Sn)):
-                    pdb.set_trace()
                     print 'Is nan', np.isnan(np.sum(Sn))
 
                 Sn_arr = np.append(Sn_arr, Sn)
@@ -653,7 +667,7 @@ class SEDTools:
                 # Interpolation object
                 intpObj = intp.interp1d(xin, np.log10(yin))
                 # Interpolated flux points
-                # pdb.set_trace()
+
                 m = 10 ** intpObj(temp0)
 
                 GFluxArr = np.append(GFluxArr, m)
@@ -665,13 +679,15 @@ class SEDTools:
          To calculate maximum temperature of a blackbody at a given
              wavelength using Wien's law.
 
-            Paramters:
-            -----------
-            lambda_: (float or np.array) reference wavelength(s) to calculate
-                                        blackbody temperature
-            units: (string) describes reference wavelength unit. All values in lambda_
-                have to be the same. Allowed units are 'angstrom','microns','cm'
-                'meters'. Units will be converted to cm for ease of calculation.
+        Parameters:
+        -----------
+
+        lambda_: (float or np.array) reference wavelength(s) to calculate
+                                    blackbody temperature
+        units: (string) describes reference wavelength unit. All values in lambda_
+            have to be the same. Allowed units are 'angstrom','microns','cm'
+            'meters'. Units will be converted to cm for ease of calculation.
+
         Returns:
         --------
         Temp: (float or np.array) Temperature in Kelvin."""
@@ -825,7 +841,7 @@ class SEDTools:
         # p0 = np.array(p0[0],p0[
         p0 = np.array([p0[0]])
         bbflux = self.blackbody(x, p0, su2ea1=su2ea, bands=bands, units='cm')
-        # pdb.set_trace()
+
         mod_arr = np.array([])
         if bands is not None:
             for band in bands:
@@ -876,7 +892,8 @@ class SEDTools:
         func = func1 / (log10(l2 / lam0)) + func2 - 5.
         return func
 
-    def photosphere(self, p0, su2ea2, griddata, tempArr, wave=(2000, 1e7), xlim=1e5, gridpts=10000):
+    def photosphere(self, p0, su2ea2, modelinfo,
+                    wave=(2000, 1e7), gridpts=10000):
         """Calculates the photospheric emission line from grid models
             given relevant parameters and griddata and temperature array,
             and range of wavelength to calculate emission for. Usually this
@@ -889,11 +906,9 @@ class SEDTools:
 
             p0: Array of parameters to be passed to SEDTools.calc_grids.
             su2ea2: Normalization to be passed to SEDTools.calc_grids.
-            griddata: Multi-dimensional array to be passed to sed.SEDTools.calc_grids
-            tempArr: Temperature array to be passed to sed.SEDTools.calc_grids
+            modelinfo: Multi-dimensional array to be passed to sed.SEDTools.calc_grids
             wave: tuple or array of 2 elements; min and max of wavelength for flux
                      to be calculated. Be consistent with units. (angstroms)
-            xlim: Wavelength limit of models (in Angstroms)
             gridPts: Integer value for how many grid points you want returned
                       (aka resolution)
 
@@ -913,18 +928,21 @@ class SEDTools:
             su2eaRJ = (p0[1] ** 2) * su2ea2
         except:
             su2eaRJ = su2ea2
-        lam_arr_all = griddata[0]
+
+        gdat = MegaGrid[modelinfo]
+        tempArr = gdat[-1]
+        lam_arr_all, flux_arr_all = gdat[0], gdat[1]
+        griddata = (lam_arr_all, flux_arr_all)
         # DETERMINE PHOTOSPHERIC CALCULATION CUT OFF WAVELENGTH BEFORE
         #  LINEAR INTERPOLATIN BEGINS
         xlim = np.max(lam_arr_all, axis=1).min()
-        # print np.max(lam_arr_all,axis=1).max()
         lamcut = xlim
-        # print 'lamcut is: ', lamcut
+
         # CREATE SAMPLING POINTS FOR GRID
         xphot = np.logspace(log10(wave[0]), log10(wave[1]), gridpts)  # angstroms
+
         # This is only for Kurucz: xphot[angstrom], yphot[erg s-1 cm-2 A-1]
         # CHECK TO SEE IF EXTRAPOLATION IS NECESSARY GIVEN INPUT LIMITS
-        #         pdb.set_trace()
         if wave[1] > xlim:
             # CUT UP X ARRAY -- grid part and extroplation part
 
@@ -945,7 +963,7 @@ class SEDTools:
             yphot = self.calc_grids(xphot, p0, su2ea2, griddata, tempArr)
         # #  for Kurucz, yphot is in erg s-1 cm-2, xphot is in micron
         # return [xphot, yphot, slope, yint]
-        return [xphot, yphot]
+        return xphot, yphot
 
     def scaleSED2bands(self, scbdlist, usebdlist, yphot,
                        fluxm, fluxme, synflux):
@@ -1000,23 +1018,39 @@ class SEDTools:
 
     def fit_photosphere(self, xlam, yfluxdat, p0, su2ea2,
                         modinfo, magfit, func):
+        """
+
+        Parameters
+        ----------
+        xlam
+        yfluxdat
+        p0
+        su2ea2
+        modinfo
+        magfit
+        func
+
+        Returns
+        -------
+
+        """
 
         gdat = MegaGrid[modinfo]
         mg4phot = magfit['photmags']
         mg4scale = magfit['scalemags']
         yflux, yfluxerr = yfluxdat
 
-        self.tempArr = gdat[-1]
-        self.lam_arr_all, self.flux_arr_all = gdat[0], gdat[1]
-        self.griddata = (self.lam_arr_all, self.flux_arr_all)
+        tempArr = gdat[-1]
+        lam_arr_all, flux_arr_all = gdat[0], gdat[1]
+        griddata = (lam_arr_all, flux_arr_all)
 
         Flx2Fit = AT.dict2list(yflux, mg4phot, '_flux')
         Flx2Fiterr = AT.dict2list(yfluxerr, mg4phot, '_flux')
         lam2Fit = AT.dict2list(xlam, mg4phot)
         Flx2scale = AT.dict2list(yflux, mg4scale, '_flux')
         Flx2scaleErr = AT.dict2list(yfluxerr, mg4scale, '_flux')
-        FluxSED = func(lam2Fit, p0, 1, self.griddata,
-                       self.tempArr, mg4scale)
+
+        FluxSED = func(lam2Fit, p0, 1, griddata, tempArr, mg4scale)
 
         print 'Bands used to fit photosphere: %s'%np.str(mg4phot)
         print 'Bands used to scale photosphere: %s'%np.str(mg4scale)
@@ -1028,8 +1062,8 @@ class SEDTools:
 
         # DEFINE INPUT PARAMETERS IN ORDER TO FIT TEMPERATURE
         self.fa = {'x': lam2Fit, 'y': Flx2Fit, 'err': Flx2Fiterr,
-                   'func': func, 'griddata': self.griddata,
-                   'tempArr': self.tempArr, 'mag2use': mg4phot,
+                   'func': func, 'griddata': griddata,
+                   'tempArr': tempArr, 'mag2use': mg4phot,
                    'su2ea1': su2ea2}
 
         parinfo = [{'value': 0., 'relstep': 0, 'limits': [0, 0], 'limited': [0, 0]}
@@ -1038,54 +1072,60 @@ class SEDTools:
         parinfo[0]['relstep'] = 0.1
         parinfo[1]['relstep'] = 0.3
         parinfo[0]['limited'] = [1, 1]
-        parinfo[0]['limits'] = [self.tempArr[0], self.tempArr[-1]]
+        parinfo[0]['limits'] = [tempArr[0], tempArr[-1]]
 
-        self.mf = mt.mpfit(FT.deviates_from_model, parinfo=parinfo,
-                           functkw=self.fa, quiet=1, maxiter=200000,
-                           xtol=1e-16, ftol=1e-16, gtol=1e-16)
+        mf = mt.mpfit(FT.deviates_from_model, parinfo=parinfo,
+                      functkw=self.fa, quiet=1, maxiter=200000,
+                      xtol=1e-16, ftol=1e-16, gtol=1e-16)
 
-        p0, errors = self.mf.params, self.mf.perror
+        p0, errors = mf.params, mf.perror
         try:
-            self.chi2 = self.mf.fnorm / self.mf.dof
+            self.chi2 = mf.fnorm / mf.dof
         except ZeroDivisionError:
             self.chi2 = -1
             print 'Degrees of freedom = 0'
         print 'chi2 = %.2f' % self.chi2
 
-        self.radius = p0[1]
-        self.tempnew = p0[0] * 1000.
+        radius = p0[1]
+        tempnew = p0[0] * 1000.
 
-        print 'Fitted Stellar Radius: %.3f Rsun' %self.radius
-        print 'Fitted Stellar Temperature: %i K' %self.tempnew
+        print 'Fitted Stellar Radius: %.3f Rsun' %radius
+        print 'Fitted Stellar Temperature: %i K' %tempnew
 
-        return
+        return radius,tempnew,mf
+
+#  DICTIONARY THAT CONTAINS ALL THE DATA IN THE INPUT JSON FILE.
 
 
-class SEDLogistics:
-
-    # Change the name of this class
+class DataLogistics:
     """ Set of tools to help with the logistical aspect
     of identifying the photospheric fit to stellar photometry:
     - loading data
-    - cleaning photometry (remove saturated and null phot)
-    - determine whether W2, W3 photometry is photospheric
     """
 
-    def __init__(self, starfile, changekeys=True):
+    def __init__(self, specs=None, changekeys=True):
 
-        self.W1_lim, self.W2_lim = 4.5, 2.8
-        self.W3_lim, self.W4_lim = 3.5, -0.4
+        # self.W1_lim, self.W2_lim = 4.5, 2.8
+        # self.W3_lim, self.W4_lim = 3.5, -0.4
+        #
+        # self.J_lim = -1000
+        # self.H_lim, self.Ks_lim = -1000, -1000
+        # self.B_lim, self.V_lim = -1000, -1000
+        workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
+        
+        starfile = os.path.join(workingdir,
+                                specs['files']['stinfo_file'])
 
-        self.J_lim = -1000
-        self.H_lim, self.Ks_lim = -1000, -1000
-        self.B_lim, self.V_lim = -1000, -1000
+        empfile = os.path.join(intpdir,specs['files']['stcolor_dir'],
+                               specs['files']['bv_colorfile'])
+        self.loadAllStars(starfile, changekeys)
+        self.loadAllModels()
+        self.loadEmpiricalData(empfile)
 
-        self.Loaddata(starfile, changekeys)
-        self.LoadAllModels()
 
         return
 
-    def Loaddata(self, starfile, changekeys=True):
+    def loadAllStars(self, starfile, changekeys=True):
 
 
         """Loads all data into a dictionary from starfile.
@@ -1099,21 +1139,47 @@ class SEDLogistics:
         Need to add in part about self-correcting
         the photometry instead of relying on input.
         """
+        if len(StarsDat) == 0:
 
-        self.stardat = readcol(starfile, asdict=True)
-        colnames = np.array(self.stardat.keys())
+            dat = readcol(starfile, asdict=True)
+            colnames = np.array(dat.keys())
+            for name in colnames:
+                StarsDat[name] = dat[name]
 
-        if changekeys:
-            if np.any(colnames == 'W1mC'):
-                self.stardat['W1m'] = self.stardat.pop('W1mC')
-                self.stardat['W1me'] = self.stardat.pop('W1meC')
-            if np.any(colnames == 'W2mC'):
-                self.stardat['W2m'] = self.stardat.pop('W2mC')
-                self.stardat['W2me'] = self.stardat.pop('W2meC')
+
+            if changekeys:
+                if np.any(colnames == 'W1mC'):
+                    StarsDat['W1m'] = StarsDat.pop('W1mC')
+                    StarsDat['W1me'] = StarsDat.pop('W1meC')
+                if np.any(colnames == 'W2mC'):
+                    StarsDat['W2m'] = StarsDat.pop('W2mC')
+                    StarsDat['W2me'] = StarsDat.pop('W2meC')
+
+        else:
+            print 'Star"s data already loaded'
 
         return
 
-    def LoadAllModels(self):
+    def loadEmpiricalData(self,filename):
+        """
+
+        Parameters
+        ----------
+        filename
+
+        Returns
+        -------
+
+        """
+
+        if len(EmpDat) == 0:#is not None:
+            dfemp = ascii.read(filename,comment='#')
+            EmpDat['dat'] = dfemp
+            #dat = EmpDat['test']
+
+        return
+
+    def loadAllModels(self):
 
         """
 
@@ -1122,286 +1188,25 @@ class SEDLogistics:
 
         """
 
-
-        allg = np.unique(self.stardat['grav'])
-        allmet = np.unique(self.stardat['met'])
-        allmod = np.unique(self.stardat['model'])
+        allg = np.unique(StarsDat['grav'])
+        allmet = np.unique(StarsDat['met'])
+        allmod = np.unique(StarsDat['model'])
 
         print '-------------------------------'
         print '      Loading All Gridmodels   '
 
         for mod in allmod:
-            print '-----'
             for z in allmet:
-                print '      -----'
                 for g in allg:
                     if (mod, g, z) not in MegaGrid:
                         MegaGrid[(mod, g, z)] = getattr(GMod, 'get_{}Grids'.format(mod))(g, z)
-                        print '           -----'
-                        # self.MegaGrid['%s_%i_%i'%(mod,met,g)] = eval('self.GMod.get_%sGrids'%mod)(g,met)
+                        print 'Loaded %s of g=%s, met=%s'%(mod,g,z)
+
 
         print '       Done Loading Models     '
         print '-------------------------------'
 
         return
-
-
-class StarObject:
-
-    def __init__(self, stardat, sid=None, starname=None):
-        """
-
-        Parameters
-        ----------
-        stardat
-        sid
-        starname
-
-        """
-
-        self.W1_lim, self.W2_lim = 4.5, 2.8
-        self.W3_lim, self.W4_lim = 3.5, -0.4
-
-        self.J_lim = -1000
-        self.H_lim, self.Ks_lim = -1000, -1000
-        self.B_lim, self.V_lim = -1000, -1000
-
-        self.mags2use = {}
-        self.mags4Dust = {}
-        self.mags4Phot = {}
-        self.mags4scale = {}
-
-        self.vegaMagDict = {}
-        self.vegaMagErrDict = {}
-
-        self.stardat = stardat
-        self.sid = sid
-        self.starname = starname
-
-        if self.sid is None and self.starname is not None:
-            id = np.where(self.stardat==self.starname)[0]
-            if len(id) == 0:
-                sys.exit("No STAR named %s was not found"
-                         " in the input file"%self.starname)
-            else:
-                self.starname = self.stardat['MainName'][id[0]]
-
-        elif self.sid is None and self.starname is None:
-            sys.exit('No object index or ID was provided')
-
-        return
-
-    def cleanphotometry(self):
-        """
-        The purpose of this module is to remove any photometry that is
-        null and supplement any null error measurements with 5% of the
-        photometric value. Also removes saturated bands for that particular
-        star.
-
-        Parameters
-        ----------
-        sid
-
-        Returns
-        -------
-
-        """
-        vegaMagDict_temp, vegaMagErrDict_temp = {}, {}
-        mg2u = copy.copy(sp.mags2use0_original)
-        mg4P = copy.copy(sp.mags4Phot0_original)
-        mg4scl = copy.copy(sp.mags4scale0_original)
-        mg4D = copy.copy(sp.mags4Dust0)
-
-        # KEEP ONLY VALID PHOTOMETRIC MEASUREMENTS.
-        for mv in sp.mags2use0_original:
-            tmp = mv
-
-            if self.stardat['%sm' % mv][self.sid] == 'null':
-                try:
-                    mg2u.remove(mv)
-                except ValueError:
-                    print 'Error in removing %s from mags2use' % mv
-                try:
-                    mg4P.remove(mv)
-                except ValueError:
-                    print 'Error in removing %s from mags4phot' % mv
-                try:
-                    mg4scl.remove(mv)
-                except ValueError:
-                    print 'Error in removing %s from mags4scale' % mv
-                try:
-                    mg4D.remove(mv)
-                except ValueError:
-                    print 'Error in removing %s from mags4dust' % mv
-
-            else:
-                vegaMagDict_temp[tmp] = float(self.stardat['%sm' % mv][self.sid])
-                if self.stardat['%sme' % mv][self.sid] == 'null':
-                    vegaMagErrDict_temp[tmp] = 0.05 * (vegaMagDict_temp[tmp])
-                else:
-                    vegaMagErrDict_temp[tmp] = float(self.stardat['%sme' % mv][self.sid])
-                    # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
-
-        self.mags2use = self.keep_unsatmags(vegaMagDict_temp, mg2u)
-        self.mags4Dust = self.keep_unsatmags(vegaMagDict_temp, mg4D)
-        self.mags4Phot = self.keep_unsatmags(vegaMagDict_temp, mg4P)
-        self.mags4scale = self.keep_unsatmags(vegaMagDict_temp, mg4scl)
-
-        # REMOVE NON-USED MAGNITUDES FROM DICTIONARY
-        for mv in self.mags2use:
-            tmp = mv
-            self.vegaMagDict[tmp] = vegaMagDict_temp[tmp]
-            self.vegaMagErrDict[tmp] = vegaMagErrDict_temp[tmp]
-
-        return
-
-    def keep_unsatmags(self, vegaDict, magsCheck):
-        """This will remove any saturated photometry from the
-        string lists. This way, they won't be used in any of
-        the analysis"""
-
-        magsCheck1 = magsCheck
-        mags_temp = np.array(magsCheck).copy()
-        for mv in mags_temp:
-            try:
-                if vegaDict[mv] < eval('self.%s_lim' % mv):
-                    magsCheck1.remove(mv)
-                else:
-                    pass
-            except:
-                pass
-
-        return magsCheck1
-
-
-    def W3Adopt(self, pmaglist=None, simple=True):
-        """Determines whether the WISE W3 photometry
-        should be included in the list of  photometric
-        points to be used to pin down the photosphere.
-        v1 uses the previously determined W1-W3 and W2-W3 cuts
-        as well as the excess SNRs (Sigma_{E[Wi-W3]}) to
-        determine whether the photometry is photospheric for
-        a given star....
-        Or whether the photometry is saturated or not.
-
-        Input:
-        ------
-        w3i: float, W3 photometry
-
-        w1w3snr, w2w3snr: float; color excess SNRs Sigma_{E[Wi-W3]}
-
-        W13cut, W23cut : float; color excess SNRs cuts determined
-                         using wise_excess_select_ultimate_v?.py
-
-        pmaglist: list; includes the string list of photometry
-                        used to pin down photosphere.
-        simple: bool; if simple is set, it uses the saturation limit
-                      to determine whether W3 should be used.
-
-        Return:
-        -------
-        plist: new list of photospheric string values
-
-        """
-
-        W13_cut = sp.W13_cut
-        W23_cut = sp.W23_cut
-
-        if not pmaglist:
-            plist = self.mags4Phot
-        else:
-            plist = pmaglist
-
-        if simple:
-            if self.stardat['W3m'][self.sid] > 3.8:
-                plist = np.append(plist, 'W3')
-        else:
-            w1w3snr = self.stardat['W1W3SNR'][self.sid]
-            w2w3snr = self.stardat['W2W3SNR'][self.sid]
-
-            try:
-                w1w3i = float(w1w3snr)
-                w3snr1 = w1w3snr
-            except ValueError:
-                w3snr1 = -100
-            try:
-                w2w3i = float(w2w3snr)
-                w3snr2 = w2w3snr
-            except ValueError:
-                w3snr2 = -100
-
-                if (w3snr1 is None) and (w3snr2 is None):
-                    pass
-
-                elif w3snr1 < W13_cut and w3snr1 > -1 * W13_cut and w3snr1 != -100:
-                    if (w3snr2 < W23_cut and w3snr1 > -1 * W13_cut and w3snr2 != -100) or (w3snr2 == -100):
-                        plist = np.append(plist, 'W3')
-
-                elif (w3snr2 < W23_cut and w3snr2 > -1 * W23_cut and w3snr2 != -100):
-                    if (w3snr1 < W13_cut and w3snr2 > -1 * W23_cut and w3snr1 != -100) or (w3snr1 == -100):
-                        plist = np.append(plist, 'W3')
-                elif (w3snr1 < W13_cut and w3snr1 > -1 * W13_cut and w3snr1 != -100) and (
-                                    w3snr2 < W23_cut and w3snr2 > -1 * W23_cut and w3snr2 != -100):
-                    plist = np.append(plist, 'W3')
-                else:
-                    pass
-
-        return plist
-
-
-    def W2Adopt(self, pmaglist=None, simple=True):
-        """Determines whether the WISE W2 photometry
-        should be included in the list of  photometric
-        points to be used to pin down the photosphere.
-        v1 uses the previously determined W1-W2 cuts
-        as well as the excess SNRs (Sigma_{E[W1-W2]}) to
-        determine whether the photometry is photospheric.
-
-        Input:
-        ------
-        w2i: float, W2 photometry
-
-        w1w2snr: float; color excess SNRs Sigma_{E[W1-W3]}
-
-        W12cut : float; color excess SNRs cuts determined
-                         using wise_excess_select_ultimate_v?.py
-
-        pmaglist: list; includes the string list of photometry
-                        used to pin down photosphere.
-
-        simple: bool; if simple is set, it uses the saturation limit
-                      to determine whether W3 should be used.
-
-
-        Return:
-        -------
-        plist: new list of photospheric string values
-
-        """
-        W12_cut = sp.W12_cut
-
-        if not pmaglist:
-            plist = self.mags4Phot
-        else:
-            plist = pmaglist
-
-        if simple:
-            if self.stardat['W2m'] > 3.8:
-                plist = np.append(plist, 'W2')
-
-        else:
-            w1w2snr = self.stardat['W1W2SNR'][self.sid]
-            try:
-                w1w2i = float(w1w2snr)
-                w2snr = w1w2snr
-            except ValueError:
-                w2snr = -100  # THIS VALUE IF THERE IS NO SNR VALUE LISTED
-
-            if w2snr <= W12_cut:
-                plist = np.append(plist, 'W2')
-
-        return plist
-
 
 class GridModels:
 
@@ -1439,7 +1244,7 @@ class GridModels:
          """
         # CHECK FORMAT OF GRAV AND METALLICITY
 
-        gdir = os.path.join(topdir, model)
+        gdir = os.path.join(intpdir, model)
 
         if grav is None:  # COLLECT ALL FILES OF ANY GRAV -- MEANT TO BE USED TO KEEP GRAV AS FREE PARAMETERS
             filesGrid = glob.glob(os.path.join(gdir, 'lteNextGen*_%.1f%s' % (met, ext)))
@@ -1553,7 +1358,7 @@ class GridModels:
             met = 'p0' + met
 
         # CHANGE DIRECTORY TO NEEDED METALLICITY FILE
-        dir = os.path.join(topdir, model, 'k' + met)
+        dir = os.path.join(intpdir, model, 'k' + met)
         # THIS SELECTS OUT ONLY THE FILES THAT MEET THE METALLICITY
         # CRITERIA
         filesGrid = glob.glob(os.path.join(dir, 'k' + met + '*.fits'))
@@ -1645,7 +1450,7 @@ class GridModels:
 
         conv2ang = 1e8
 
-        newdir = os.path.join(topdir, 'NextGen2')
+        newdir = os.path.join(intpdir, 'NextGen2')
         # os.mkdir(newdir)
         dir = '~/Desktop/PHOENIX'
         if (met == 'all') and (grav == 'all'):

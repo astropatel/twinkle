@@ -19,3 +19,5 @@ def Atlas9():
 def RSR():
     return getDir('RSR')
 
+def WorkingDir(name):
+    return getDir(name)
