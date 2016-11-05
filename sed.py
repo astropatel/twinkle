@@ -12,6 +12,11 @@
   Issues and changes that need to be made:
   1. Remove mpfit and use internal scipy fitting routine.
   2. vega2AB needs to be updated or deprecated.
+  3. Add logger
+  4. remove readcol.py
+  5. reamove astro_tools
+  6. Include Joe in author list
+  7. Change init to only load pband files from mags2use.
 """
 
 import os, operator, glob, directories
@@ -26,9 +31,9 @@ try:
     from astropy.io import fits as pyfits
     from astropy.io import ascii
 except ImportError:
-    print 'No astropy module was detected.'
+    print 'Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.'
 
-__author__ = 'Rahul I. Patel, Joe Trollo'
+__author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 con = Constants()
 DIR = directories
 

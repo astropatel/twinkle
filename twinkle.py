@@ -1,3 +1,17 @@
+"""
+***********************************************************************
+    twinkle.py by Rahul I. Patel (ri.patel272@gmail.com)
+***********************************************************************
+Issues and changes that need to be made:
+ 1. Include Logger.
+ 2. Add attributes description to doc string
+ 3. Fix plot functions to use kwargs
+ 4. Remove readcol.,py
+ 5. Have code use more than Bt-Vt to interpolate mamajek's file
+
+
+"""
+
 import sed
 import math as ma
 import numpy as np
@@ -7,11 +21,12 @@ from astropy import constants as con
 try:
     import matplotlib.pyplot as plt
 except ImportError:
-    print 'Matplotlib not detected. You wont be able to use the plotting functions'
+    print 'Matplotlib doesnt seem to be installed detected. Fine by me, but now you cant use the awesome' \
+          'plotting function we have. Sucks for you.'
 
 STools = __import__('sed').SEDTools()
 
-__author__ = 'Rahul I. Patel'
+__author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
 #  set up constants
 _cs = con.c.to('cm/s')
@@ -33,8 +48,7 @@ Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
 
 class StarObject:
-    def __init__(self, jfile, sid=None, starname=None):
-        """
+    """
         Instantiating StarObject does a number of things, foremost of
         which is to create a StarObject for ONE particular star. The
         initialization process loads the input script file, uploads
@@ -46,6 +60,13 @@ class StarObject:
         and possibly scales the new photosphere to a subset of the
         input photometry.
 
+        FYI: I get bored and some of the print statements may be... odd.
+
+    """
+
+    def __init__(self, jfile, sid=None, starname=None):
+        """
+        Instantiates a "twinkling star" object (funny, I know).
 
         Parameters
         ----------
@@ -500,12 +521,11 @@ class StarObject:
         xlam, yflux = self.StarPhotosphere
 
         # PLOT PHOTOSPHERE CONTINUUM
-        ax.plot(xlam * _ang2micron, yflux * xlam, '%s%s'%(lcolor,linestyle),
-                lw=lw)
+        ax.plot(xlam * _ang2micron, yflux * xlam, color=lcolor, ls=linestyle, lw=lw)
 
         for band in self.mags2use:
             ax.plot(self.wave[band] * _ang2micron, self.photFlux[band] * self.wave[band],
-                    '%s%s'%(pcolor,marker),ms=pointsize)
+                    marker=marker,mfc=pcolor,ms=pointsize)
 
         return
 
@@ -535,7 +555,7 @@ class StarObject:
         if self.fullspectrum is not None:
             ylam = self.fullspectrum
 
-        ax.plot(xlam * _ang2micron, ylam * xlam,'%s%s'%(lcolor,linestyle),lw=lw)
+        ax.plot(xlam * _ang2micron, ylam * xlam,color=lcolor, ls=linestyle,lw=lw)
 
         for band,lam in self.wave.iteritems():
             flx = self.flux[band + '_flux']
