@@ -214,7 +214,6 @@ class StarObject:
                 phot_norm_fac, yphot, yphot_unsc, RJ_On = new_phot
                 self.StarPhotosphere[1] = yphot
 
-        return
 
     def writeSED(self, filename='sedtest.txt',
                  comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom\n'):
@@ -237,7 +236,6 @@ class StarObject:
 
         print 'SED saved to %s' % filename
 
-        return
 
     def cleanphotometry(self, specs):
         """
@@ -328,7 +326,7 @@ class StarObject:
             self.vegaMagDict[tmp] = vegaMagDict_temp[tmp]
             self.vegaMagErrDict[tmp] = vegaMagErrDict_temp[tmp]
 
-        return
+
 
     def keep_unsatmags(self, vegaDict, magsCheck):
         """
@@ -506,7 +504,7 @@ class StarObject:
 
         self.StarRadius, self.StarTemp = fit_dat[0], fit_dat[1]
         self.mfit = fit_dat[2]
-        return
+
 
     def plot_photosphere(self,ax,pointsize=4,lcolor='orange',pcolor='orange',
                          marker='o',linestyle='--',lw=2):
@@ -532,7 +530,7 @@ class StarObject:
             ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
                     marker=marker,mfc=pcolor,ms=pointsize)
 
-        return
+
 
     def plot_observedData(self,ax,pointsize=4,lcolor='k', pcolor='g',
                           markerp='o',markernp='*',capsize=0,linestyle='-',lw=1):
@@ -574,4 +572,4 @@ class StarObject:
             ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr,fmt=pfmt,
                         capsize=capsize,ms=pointsize)
 
-        return
+

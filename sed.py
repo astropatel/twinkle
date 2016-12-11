@@ -155,13 +155,13 @@ class SEDTools:
             self.HPACS70pband = aspband(os.path.join(fRSR, '70_HPACS.dat'), inputUnits=u)
             self.HPACS100pband = aspband(os.path.join(fRSR, '100_HPACS.dat'), inputUnits=u)
             self.HPACS160pband = aspband(os.path.join(fRSR, '160_HPACS.dat'), inputUnits=u)
-            return
+
         elif RSRFile is not None and not flat:
             self.pband = aspband(os.path.join(fRSR, RSRFile), inputUnits=u)
         elif flat:
             self.pband = Flatbandpass(waverange, cntr)
 
-        return
+
 
     def cgs2Jy(self, wave=None, nu=None, flux=None):
         """To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
@@ -301,11 +301,11 @@ class SEDTools:
         else:
             print 'Band ', band, ' doesn" exist. Please check bandpass.'
             mab = None
+
         if mab == None:
             print 'No conversion occured. Check variables'
-            return mab
-        else:
-            return mab
+
+        return mab
 
     def batch_vega2AB(self, mag_list, vegaMag, vegaMagErr):
         """
@@ -1132,7 +1132,6 @@ class DataLogisti_CS:
         self.loadEmpiricalData(empfile)
 
 
-        return
 
     def loadAllStars(self, starfile, changekeys=True):
 
@@ -1167,7 +1166,6 @@ class DataLogisti_CS:
         else:
             print 'Star"s data already loaded'
 
-        return
 
     def loadEmpiricalData(self,filename):
         """
@@ -1186,7 +1184,6 @@ class DataLogisti_CS:
             EmpDat['dat'] = dfemp
             #dat = EmpDat['test']
 
-        return
 
     def loadAllModels(self):
 
@@ -1215,7 +1212,6 @@ class DataLogisti_CS:
         print '       Done Loading Models     '
         print '-------------------------------'
 
-        return
 
 class GridModels:
 
@@ -1670,5 +1666,3 @@ class Flatbandpass:
                 raise Exception, "DAFUQ? Units no make sense"
 
             self.isoFrequency = _CS / self.isoWavelength
-
-        return
