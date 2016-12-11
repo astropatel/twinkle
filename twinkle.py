@@ -34,20 +34,20 @@ __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 #  set up constants
 _CS = con.c.to('cm/s')
 _H = con.h.to('erg s')
-_Kb = con.k_B.to('erg/K')
+_KB = con.k_B.to('erg/K')
 _RSUN = con.R_sun.to('cm')
 _LSUN = con.L_sun.to('erg/s')
 
 #  SET UP UNIT CONVERSION.
 _PC2CM = 3.08568025e+18
 _SOLRAD2CM = 69550000000.0
-_AU2cm = 14959787070000.0
+_AU2CM = 14959787070000.0
 _ANG2MICRON = 0.0001
 _MICRON2ANG = 1. / _ANG2MICRON
 _ANG2CM = 1e-8
 
 CONST_1 = (_SOLRAD2CM/ _PC2CM) ** 2
-CONST_2 = _AU2cm ** 2 / (4 * ma.pi * _PC2CM ** 2)
+CONST_2 = _AU2CM ** 2 / (4 * ma.pi * _PC2CM ** 2)
 
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
