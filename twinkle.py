@@ -12,10 +12,15 @@ Issues and changes that need to be made:
 
 """
 
+
+
+import copy
+import json
+import os
+import sys
 import sed
-import math as ma
 import numpy as np
-import sys, copy, os, json
+
 try:
     from astropy import constants as con
 except ImportError:
@@ -27,7 +32,7 @@ except ImportError:
     print 'Matplotlib doesnt seem to be installed detected. Fine by me, but now you cant use the awesome' \
           'plotting function we have. Sucks for you.'
 
-STools = __import__('sed').SEDTools()
+STools = sed.SEDTools()
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
@@ -47,7 +52,7 @@ _MICRON2ANG = 1. / _ANG2MICRON
 _ANG2CM = 1e-8
 
 CONST_1 = (_SOLRAD2CM/ _PC2CM) ** 2
-CONST_2 = _AU2CM ** 2 / (4 * ma.pi * _PC2CM ** 2)
+CONST_2 = _AU2CM ** 2 / (4 * np.pi * _PC2CM ** 2)
 
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
@@ -228,11 +233,12 @@ class StarObject:
 
         """
         assert self.StarPhotosphere, 'Photosphere not created and cant be written out.'
-        fSED = open(filename, 'w')
-        fSED.write('%s' % comment)
-        fSED.write('lambda\t f_lambda\n')
-        np.savetxt(fSED, np.transpose(self.StarPhotosphere), delimiter='\t')
-        fSED.close()
+        with open(filename,'w') as file:
+            file.write()
+            file.write('%s' % comment)
+            file.write('lambda\t f_lambda\n')
+            np.savetxt(file, np.transpose(self.StarPhotosphere), delimiter='\t')
+
 
         print 'SED saved to %s' % filename
 

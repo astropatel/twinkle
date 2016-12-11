@@ -19,13 +19,17 @@
   7. Change init to only load pband files from mags2use.
 """
 
-import os, operator, glob, directories
-from math import *
+import os
+import operator
+import glob
+import directories
+
 import numpy as np
 from readcol import *
 import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
+
 try:
     from astropy import constants as con
 except ImportError:
@@ -960,7 +964,7 @@ class SEDTools:
             # yphot1 USES GRIDS, WHILE yphot2 USES RAYLEIGH-JEANS
             yphot1 = self.calc_grids(xphot1, p0, su2ea2, griddata, tempArr)
             # USE RAYLEIGH-JEANS FOR EXTRAPOLATION
-            yphot2 = (pi * 1.4) * su2eaRJ * _CS * _KB * tempStar / (xphot2 * _ANG2CM) ** 3
+            yphot2 = (np.pi * 1.4) * su2eaRJ * _CS * _KB * tempStar / (xphot2 * _ANG2CM) ** 3
             yphot2 = yphot2 / xphot2
             # PUT IT ALL TOGETHER
             xphot = np.concatenate([xphot1, xphot2])
