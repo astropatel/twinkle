@@ -16,7 +16,10 @@ import sed
 import math as ma
 import numpy as np
 import sys, copy, os, json
-from astropy import constants as con
+try:
+    from astropy import constants as con
+except ImportError:
+    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
 
 try:
     import matplotlib.pyplot as plt
@@ -29,20 +32,22 @@ STools = __import__('sed').SEDTools()
 __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
 #  set up constants
-_cs = con.c.to('cm/s')
-_h = con.h.to('erg s')
-_kb = con.k_B.to('erg/K')
-_Rsun = con.R_sun.to('cm')
-_Lsun = con.L_sun.to('erg/s')
-_pc2cm = 3.08568025e+18
-_solrad2cm = 69550000000.0
-_AU2cm = 14959787070000.0
-_ang2micron = 0.0001
-_micron2ang = 1. / _ang2micron
-_ang2cm = 1e-8
+_CS = con.c.to('cm/s')
+_H = con.h.to('erg s')
+_Kb = con.k_B.to('erg/K')
+_RSUN = con.R_sun.to('cm')
+_LSUN = con.L_sun.to('erg/s')
 
-const1 = (_solrad2cm / _pc2cm) ** 2
-const2 = _AU2cm ** 2 / (4 * ma.pi * _pc2cm ** 2)
+#  SET UP UNIT CONVERSION.
+_PC2CM = 3.08568025e+18
+_SOLRAD2CM = 69550000000.0
+_AU2cm = 14959787070000.0
+_ANG2MICRON = 0.0001
+_MICRON2ANG = 1. / _ANG2MICRON
+_ANG2CM = 1e-8
+
+CONST_1 = (_SOLRAD2CM/ _PC2CM) ** 2
+CONST_2 = _AU2cm ** 2 / (4 * ma.pi * _PC2CM ** 2)
 
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
@@ -147,8 +152,8 @@ class StarObject:
         self.met = 0
         self.modeli = self.starsdat['model'][self.sid]
 
-        self.su2ea = const1 / self.disti ** 2
-        self.su2ea_dust = const2 / self.disti ** 2
+        self.su2ea = CONST_1 / self.disti ** 2
+        self.su2ea_dust = CONST_2 / self.disti ** 2
 
         #  Obtain grav and met from file or guess based on B-V
         try:
@@ -521,10 +526,10 @@ class StarObject:
         xlam, yflux = self.StarPhotosphere
 
         # PLOT PHOTOSPHERE CONTINUUM
-        ax.plot(xlam * _ang2micron, yflux * xlam, color=lcolor, ls=linestyle, lw=lw)
+        ax.plot(xlam * _ANG2MICRON, yflux * xlam, color=lcolor, ls=linestyle, lw=lw)
 
         for band in self.mags2use:
-            ax.plot(self.wave[band] * _ang2micron, self.photFlux[band] * self.wave[band],
+            ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
                     marker=marker,mfc=pcolor,ms=pointsize)
 
         return
@@ -555,7 +560,7 @@ class StarObject:
         if self.fullspectrum is not None:
             ylam = self.fullspectrum
 
-        ax.plot(xlam * _ang2micron, ylam * xlam,color=lcolor, ls=linestyle,lw=lw)
+        ax.plot(xlam * _ANG2MICRON, ylam * xlam,color=lcolor, ls=linestyle,lw=lw)
 
         for band,lam in self.wave.iteritems():
             flx = self.flux[band + '_flux']
@@ -566,7 +571,7 @@ class StarObject:
             else:
                 pfmt= '%s%s'%(pcolor,markernp)
 
-            ax.errorbar(lam * _ang2micron, flx * lam, yerr=flxerr,fmt=pfmt,
+            ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr,fmt=pfmt,
                         capsize=capsize,ms=pointsize)
 
         return

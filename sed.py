@@ -26,7 +26,10 @@ from readcol import *
 import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
-from astro_tools import Constants
+try:
+    from astropy import constants as con
+except ImportError:
+    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
 try:
     from astropy.io import fits as pyfits
     from astropy.io import ascii
@@ -34,13 +37,23 @@ except ImportError:
     print 'Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.'
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
-con = Constants()
+
 DIR = directories
 
 intpdir = DIR.Interpolation_Files()
 fRSR = DIR.RSR()
 AT = mt.ArrayTools()
 FT = mt.FittingTools()
+
+# SET UP CONSTANTS
+_CS = con.c.to('cm/s')
+_WIEN = con.b_wien.to('K cm')
+_H = con.h.to('erg s')
+_Kb = con.k_B.to('erg/K')
+
+# SET UP UNIT CONVERSION.
+_CM2ANG = 100000000.0
+_ANG2CM = 1e-8
 
 #  DICTIONARY TO HOUSE ALL THE PHOTOSPHERIC MODELS EVENTUALLY
 MegaGrid = {}
@@ -164,16 +177,15 @@ class SEDTools:
         --------
         flux density in Jansky(ies).
         """
-        cs = con._celeritas * con._cm2ang
         Flux = flux * wave
 
         if nu is None:
-            nu = (cs / wave)  # ERROR IS INCURRED BY CHOICE OF SPEED OF LIGHT -- USE CAREFULLY
+            nu = (_CS / wave)  # ERROR IS INCURRED BY CHOICE OF SPEED OF LIGHT -- USE CAREFULLY
             #  IF POSSIBLE TRY TO USE GIVEN FREQUENCIES
         else:
             pass
 
-        # y = flux*(wave**2/(cs))*1e23
+        # y = flux*(wave**2/(_CS))*1e23
         y = (Flux / nu) * 1e23
         return y
 
@@ -261,7 +273,7 @@ class SEDTools:
         elif band == 'Ks2M':
             mab = m_vega + 1.84
         # TAKEN FROM WISE FAQ
-        # http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/
+        # http://wise2.ipac.caltech.edu/do_CS/release/allsky/expsup/
 
         elif band == 'W1':
             mab = m_vega + 2.699
@@ -710,7 +722,7 @@ class SEDTools:
         else:
             print 'Unit was not recognized'
             sys.exit()
-        Temp = con._Wien / x
+        Temp = _WIEN / x
         return Temp
 
     def blackbody(self, lambda_, p0, su2ea1=1, bands=None,
@@ -760,16 +772,13 @@ class SEDTools:
             bulk = False
         # IF CONVOLVING TO FILTER TRANSMISSION, X SHOULD CONFORM TO LENGTH
         # TRANSMISSION CURVE
-        h = con._planck
-        kb = con._kb
-        c = con._celeritas
         if bulk:
-            const = su2ea * ((2 * h * c ** 2))
-            fluxbb = const / ((x ** 4 * ((np.exp(h * c / (kb * np.outer(x, temp0))) - 1).transpose())).transpose())
+            const = su2ea * ((2 * _H * _CS ** 2))
+            fluxbb = const / ((x ** 4 * ((np.exp(_H * _CS / (_KB * np.outer(x, temp0))) - 1).transpose())).transpose())
 
         elif not bulk:
-            const = su2ea * ((2 * h * c ** 2) / x ** 4)
-            fluxbb = const / (np.exp(h * c / (x * kb * temp0)) - 1)
+            const = su2ea * ((2 * _H * _CS ** 2) / x ** 4)
+            fluxbb = const / (np.exp(_H * _CS / (x * _KB * temp0)) - 1)
 
             # IF FILTER IS GIVEN, CALCULATES FLUX FROM THROUGH GIVEN
             # BANDPASS. OTHERWISE RETURNS FLUX ARRAY FROM ALL WAVELENGHTS
@@ -778,7 +787,7 @@ class SEDTools:
         if bands is not None:
             for band in bands:
                 pband = eval('self.' + band + 'pband')
-                xmin, xmax = x.min() * con._cm2ang, x.max() * con._cm2ang  # lambda_.min(), lambda_.max()
+                xmin, xmax = x.min() * _CM2ANG, x.max() * _CM2ANG  # lambda_.min(), lambda_.max()
                 pb_xmin, pb_xmax = pband.wavelength.min(), pband.wavelength.max()
                 if xmin > pb_xmin:
                     print 'Sample size too small. Need more on blue end for %s band.' % band
@@ -788,10 +797,10 @@ class SEDTools:
                     sys.exit()
                 else:
                     pass
-                flux = np.array(self.rsr_flux(pband, x * con._cm2ang, fluxbb, bulk))
+                flux = np.array(self.rsr_flux(pband, x * _CM2ANG, fluxbb, bulk))
                 flux_arr = np.append(flux_arr, flux / pband.pivotWavelength())
         else:
-            flux_arr = fluxbb / (x * con._cm2ang)
+            flux_arr = fluxbb / (x * _CM2ANG)
         return flux_arr
 
     def calcRJ_spectrum(self, xarr, yarr):
@@ -865,14 +874,12 @@ class SEDTools:
         """Assumes Flux in units of erg/s/cm2/A and returns temperature in kelvin.
         to be used in conjunction with Newton-Raphson algorithm
         """
-        h = con._planck
-        kb = con._kb
-        c = con._celeritas
+
         lA, fA = lamArr.copy(), flxArr.copy()
         l1, l2 = lA[0], lA[1]  # lam1,lam2
         Flux1, Flux2 = fA[0], fA[1]
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
-        gc = h * c / kb
+        gc = _H * _CS / _KB
         func = exp(gc / (l2 * T0)) - Ratio * exp(gc / (l1 * T0)) - 1 + Ratio
         return func
 
@@ -883,15 +890,13 @@ class SEDTools:
         in conjunction with a Newton-Raphson/Bisecting algorithm to find zeros for the
         temperature equation.
         """
-        h = con._planck
-        kb = con._kb
-        c = con._celeritas
+
         lam0 = lam0  # 0.00115608 # W3 [cm]
         lA, fA = lamArr.copy(), flxArr.copy()
         l1, l2 = lA[0], lA[1]
         Flux1, Flux2 = fA[0], fA[1]
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
-        gc = h * c / kb
+        gc = _H * _CS / _Kb
         func1 = log10(((exp(gc / (l2 * T0)) - 1) / (exp(gc / (l1 * T0)) - 1)) * Ratio ** (-1))
         func2 = (gc / (T0 * lam0)) * exp(gc / (lam0 * T0)) / (exp(gc / (lam0 * T0)) - 1)
         func = func1 / (log10(l2 / lam0)) + func2 - 5.
@@ -926,8 +931,7 @@ class SEDTools:
             yint: y-intercept of Rayleigh-Jeans line obviously,
                   the last two are in log space
             """
-        cs = con._celeritas
-        kb = con._kb
+
         tempStar = p0[0] * 1000.
         try:
             su2eaRJ = (p0[1] ** 2) * su2ea2
@@ -956,7 +960,7 @@ class SEDTools:
             # yphot1 USES GRIDS, WHILE yphot2 USES RAYLEIGH-JEANS
             yphot1 = self.calc_grids(xphot1, p0, su2ea2, griddata, tempArr)
             # USE RAYLEIGH-JEANS FOR EXTRAPOLATION
-            yphot2 = (pi * 1.4) * su2eaRJ * cs * kb * tempStar / (xphot2 * con._ang2cm) ** 3
+            yphot2 = (pi * 1.4) * su2eaRJ * _CS * _KB * tempStar / (xphot2 * _ANG2CM) ** 3
             yphot2 = yphot2 / xphot2
             # PUT IT ALL TOGETHER
             xphot = np.concatenate([xphot1, xphot2])
@@ -1102,13 +1106,13 @@ class SEDTools:
 #  DICTIONARY THAT CONTAINS ALL THE DATA IN THE INPUT JSON FILE.
 
 
-class DataLogistics:
+class DataLogisti_CS:
     """ Set of tools to help with the logistical aspect
     of identifying the photospheric fit to stellar photometry:
     - loading data
     """
 
-    def __init__(self, specs=None, changekeys=True):
+    def __init__(self, spe_CS=None, changekeys=True):
 
         # self.W1_lim, self.W2_lim = 4.5, 2.8
         # self.W3_lim, self.W4_lim = 3.5, -0.4
@@ -1116,13 +1120,13 @@ class DataLogistics:
         # self.J_lim = -1000
         # self.H_lim, self.Ks_lim = -1000, -1000
         # self.B_lim, self.V_lim = -1000, -1000
-        workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
+        workingdir = directories.WorkingDir(spe_CS['files']['stinfo_topdir'])
         
         starfile = os.path.join(workingdir,
-                                specs['files']['stinfo_file'])
+                                spe_CS['files']['stinfo_file'])
 
-        empfile = os.path.join(intpdir,specs['files']['stcolor_dir'],
-                               specs['files']['bv_colorfile'])
+        empfile = os.path.join(intpdir,spe_CS['files']['stcolor_dir'],
+                               spe_CS['files']['bv_colorfile'])
         self.loadAllStars(starfile, changekeys)
         self.loadAllModels()
         self.loadEmpiricalData(empfile)
@@ -1665,7 +1669,6 @@ class Flatbandpass:
             else:
                 raise Exception, "DAFUQ? Units no make sense"
 
-            cs = con._celeritas * con._cm2ang
-            self.isoFrequency = cs / self.isoWavelength
+            self.isoFrequency = _CS / self.isoWavelength
 
         return
