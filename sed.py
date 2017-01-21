@@ -12,7 +12,7 @@
   Issues and changes that need to be made:
   1. Remove mpfit and use internal scipy fitting routine.
   2. vega2AB needs to be updated or deprecated.
-  3. Add logger
+  3. Add logger -- DONT' NEED FOR THIS ONE
   4. remove readcol.py
   5. reamove astro_tools
   6. Include Joe in author list

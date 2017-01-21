@@ -3,7 +3,6 @@
     twinkle.py by Rahul I. Patel (ri.patel272@gmail.com)
 ***********************************************************************
 Issues and changes that need to be made:
- 1. Include Logger.
  2. Add attributes description to doc string
  3. Fix plot functions to use kwargs
  4. Remove readcol.,py
@@ -12,13 +11,16 @@ Issues and changes that need to be made:
 
 """
 
-import copy
-import json
 import os
 import sys
+import json
+import logging
 import numpy as np
 
 import sed
+
+logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
+
 try:
     from astropy import constants as con
 except ImportError:
@@ -49,7 +51,7 @@ _ANG2MICRON = 0.0001
 _MICRON2ANG = 1. / _ANG2MICRON
 _ANG2CM = 1e-8
 
-CONST_1 = (_SOLRAD2CM/ _PC2CM) ** 2
+CONST_1 = (_SOLRAD2CM / _PC2CM) ** 2
 CONST_2 = _AU2CM ** 2 / (4 * np.pi * _PC2CM ** 2)
 
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
@@ -94,7 +96,7 @@ class Star:
             script = open(jfile).read()
             specs = json.loads(script)
         except ValueError as Err:
-            print 'JSON is trippin cause of, ', Err
+            logging.info('JSON is trippin cause of, ', Err)
             raise ValueError(Err)
 
         if sed.StarsDat is not None:
@@ -141,7 +143,7 @@ class Star:
 
         elif self.sid is not None and self.starname is not None:
             raise ValueError('Provide either name of location index, not both.')
-
+        logging.info('WORKING STAR:%s'%self.starname)
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
         # vegaMagDict and errdict ARE FILLED UP HERE.
@@ -190,7 +192,8 @@ class Star:
             self.fitPhotosphere(self.su2ea, self.T0,
                                 self.modeli, self.g, self.met)
 
-            print 'Photosphere for %s fit with T=%s K' % (self.starname, self.StarTemp)
+            logging.info('Photosphere for %s fit with T=%s K'
+                         %(self.starname, self.StarTemp))
 
             wave_min, wave_max = specs['spec_sample']['wave_min'], \
                                  specs['spec_sample']['wave_max']
@@ -208,7 +211,7 @@ class Star:
 
         else:
 
-            print 'Photosphere fit not requested.'
+            logging.info('Photosphere fit not requested for %s.'%self.starname)
             if specs['scalephot']:
                 new_phot = STools.scaleSED2bands(specs['phot']['scaleSEDbands'],
                                                  self.mags2use, self.StarPhotosphere[1],
@@ -218,7 +221,7 @@ class Star:
                 self.StarPhotosphere[1] = yphot
 
 
-    def writeSED(self, filename='sedtest.txt',
+    def writeSED(self, filename='sed.txt',
                  comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom\n'):
         """
         Function to write out fitted SED to file.
@@ -231,6 +234,7 @@ class Star:
 
         """
         assert self.StarPhotosphere, 'Photosphere not created and cant be written out.'
+        filename = self.starname + filename
         with open(filename,'w') as file:
             file.write()
             file.write('%s' % comment)
@@ -238,7 +242,7 @@ class Star:
             np.savetxt(file, np.transpose(self.StarPhotosphere), delimiter='\t')
 
 
-        print 'SED saved to %s' % filename
+        logging.info('SED for %s saved to %s'%(self.starname,filename))
 
 
     def cleanphotometry(self, specs):
@@ -264,10 +268,10 @@ class Star:
 
         vegaMagDict_temp, vegaMagErrDict_temp = {}, {}
 
-        mags2use0 = copy.copy(specs['phot']['mags2use0_original'])
-        mags4Phot0 = copy.copy(specs['phot']['mags4Phot0_original'])
-        mags4scale0 = copy.copy(specs['phot']['mags4scale0_original'])
-        mags4Dust0 = copy.copy(specs['phot']['mags4Dust0'])
+        mags2use0 = specs['phot']['mags2use0_original'].copy()
+        mags4Phot0 =  specs['phot']['mags4Phot0_original'].copy()
+        mags4scale0 = specs['phot']['mags4scale0_original'].copy()
+        mags4Dust0 = specs['phot']['mags4Dust0'].copy()
 
         #  ========================================
         #  Whether to use W3 and W2 to fit photosphere
@@ -294,20 +298,24 @@ class Star:
             if self.starsdat['%sm' % mv][self.sid] == 'null':
                 try:
                     mags2use0.remove(mv)
+                    logging.info('%s band removed from mags2use0'%mv)
                 except ValueError:
-                    print 'Error in removing %s from mags2use' % mv
+                    loggging.error('Error in removing %s from mags2use' % mv)
                 try:
                     mags4Phot0.remove(mv)
+                    logging.info('%s band removed from mags4Phot0'%mv)
                 except ValueError:
-                    print 'Error in removing %s from mags4phot' % mv
+                    loggging.error('Error in removing %s from mags4phot' % mv)
                 try:
                     mags4scale0.remove(mv)
+                    logging.info('%s band removed from mags4scale0'%mv)
                 except ValueError:
-                    print 'Error in removing %s from mags4scale' % mv
+                    loggging.error('Error in removing %s from mags4scale' % mv)
                 try:
                     mags4Dust0.remove(mv)
+                    logging.info('%s band removed from mags4Dust0' % mv)
                 except ValueError:
-                    print 'Error in removing %s from mags4dust' % mv
+                    loggging.error('Error in removing %s from mags4dust' % mv)
 
             else:
                 vegaMagDict_temp[tmp] = float(self.starsdat['%sm' % mv][self.sid])
@@ -354,6 +362,8 @@ class Star:
             try:
                 if vegaDict[mv] < eval('self.%s_lim' % mv):
                     magsCheck1.remove(mv)
+                    logging.info('%s band is saturated:%.4f<%.4f'
+                                 %(mv,vegaDict[mv],eval('self.%s_lim' % mv)))
                 else:
                     pass
             except:
