@@ -12,15 +12,13 @@ Issues and changes that need to be made:
 
 """
 
-
-
 import copy
 import json
 import os
 import sys
-import sed
 import numpy as np
 
+import sed
 try:
     from astropy import constants as con
 except ImportError:
@@ -57,7 +55,7 @@ CONST_2 = _AU2CM ** 2 / (4 * np.pi * _PC2CM ** 2)
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
 
-class StarObject:
+class Star:
     """
         Instantiating StarObject does a number of things, foremost of
         which is to create a StarObject for ONE particular star. The
@@ -132,17 +130,17 @@ class StarObject:
         if self.sid is None and self.starname is not None:
             ind = np.where(self.starsdat['MainName'] == self.starname)[0]
             if len(ind) == 0:
-                sys.exit("No STAR named %s was not found"
-                         " in the input file" % self.starname)
+                raise ValueError("%s was not found in the input file"
+                                 % self.starname)
             else:
                 self.sid = ind[0]
                 self.starname = self.starsdat['MainName'][self.sid]
 
         elif self.sid is None and self.starname is None:
-            sys.exit('No object index or ID was provided')
+            raise ValueError('No object index or ID was provided')
 
         elif self.sid is not None and self.starname is not None:
-            sys.exit('Provide either name of location index, not both.')
+            raise ValueError('Provide either name of location index, not both.')
 
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
@@ -388,7 +386,7 @@ class StarObject:
         """
 
         if pmaglist is None:
-            sys.exit('No maglist specified for W3Adopt')
+            raise ValueError('No maglist specified for W3Adopt')
         else:
             plist = pmaglist
 
@@ -454,7 +452,7 @@ class StarObject:
         """
 
         if pmaglist is None:
-            sys.exit('No maglist specified for W2Adopt')
+            raise ValueError('No maglist specified for W2Adopt')
         else:
             plist = pmaglist
 

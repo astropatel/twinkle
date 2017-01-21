@@ -23,8 +23,8 @@ import os
 import operator
 import glob
 import directories
-
 import numpy as np
+
 from readcol import *
 import mosaic_tools as mt
 import scipy.interpolate as intp
@@ -35,8 +35,7 @@ try:
 except ImportError:
     print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
 try:
-    from astropy.io import fits as pyfits
-    from astropy.io import ascii
+    import astropy.io as ai
 except ImportError:
     print 'Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.'
 
@@ -724,8 +723,7 @@ class SEDTools:
         elif units == 'cm':
             x = x
         else:
-            print 'Unit was not recognized'
-            sys.exit()
+            raise ValueError('Unit was not recognized')
         Temp = _WIEN / x
         return Temp
 
@@ -761,8 +759,8 @@ class SEDTools:
         elif units == 'cm':
             x = x
         else:
-            print 'Unit was not recognized'
-            sys.exit()
+            raise ValueError('Unit was not recognized')
+
 
         temp0 = p0[0]
         # CHECK PARAMETERS AND NORMALIZATION
@@ -794,11 +792,9 @@ class SEDTools:
                 xmin, xmax = x.min() * _CM2ANG, x.max() * _CM2ANG  # lambda_.min(), lambda_.max()
                 pb_xmin, pb_xmax = pband.wavelength.min(), pband.wavelength.max()
                 if xmin > pb_xmin:
-                    print 'Sample size too small. Need more on blue end for %s band.' % band
-                    sys.exit()
+                    raise ValueError('Sample size too small. Need more on blue end for %s band.' % band)
                 elif xmax < pb_xmax:
-                    print 'Sample size too small. Need more on red end %s band.' % band
-                    sys.exit()
+                    raise ValueError('Sample size too small. Need more on red end %s band.' % band)
                 else:
                     pass
                 flux = np.array(self.rsr_flux(pband, x * _CM2ANG, fluxbb, bulk))
@@ -846,8 +842,8 @@ class SEDTools:
             x = x
             x0 = x0
         else:
-            print 'Unit was not recognized'
-            sys.exit()
+            raise ValueError('Unit was not recognized')
+
             #  temp0 = p0[0]*100.
         # p0[0] = p0[0]*100.
         # CHECK PARAMETERS AND NORMALIZATION
@@ -1184,7 +1180,7 @@ class DataLogisti_CS:
         """
 
         if len(EmpDat) == 0:#is not None:
-            dfemp = ascii.read(filename,comment='#')
+            dfemp = ai.ascii.read(filename,comment='#')
             EmpDat['dat'] = dfemp
             #dat = EmpDat['test']
 
@@ -1262,8 +1258,7 @@ class GridModels:
             filesGrid = glob.glob(os.path.join(gdir, 'lteNextGen*_%.1f_%.1f%s' % (grav, met, ext)))
 
         if len(filesGrid) < 1:
-            print 'There were no files matching your criteria. Try again.'
-            sys.exit()
+            raise ValueError('There were no files matching your criteria. Try again.')
 
         ddat = {}
         tempArr = np.array([])
@@ -1372,15 +1367,14 @@ class GridModels:
         # CRITERIA
         filesGrid = glob.glob(os.path.join(dir, 'k' + met + '*.fits'))
         if len(filesGrid) < 1:
-            print 'There were no files matching your criteria. Try again.'
-            sys.exit()
+            raise ValueError('There were no files matching your criteria. Try again.')
 
         ddat = {}
         tempArr = np.array([])
 
         for f in filesGrid:
             try:
-                hdui = pyfits.open(f)
+                hdui = ai.fits.open(f)
                 ti = hdui[0].header['TEFF']
             except:
                 print "Something's wrong with %s" % f
@@ -1474,8 +1468,8 @@ class GridModels:
             pass
 
         if len(filesGrid) < 1:
-            print 'There were no files matching your criteria. Try again.'
-            sys.exit()
+            raise ValueError('There were no files matching your criteria. Try again.')
+
         else:
             for file in filesGrid:
                 # f = open(file,'r').readlines()
@@ -1604,7 +1598,6 @@ class Bandpass:
             zperr = h.header[2]
         except IndexError:
             print 'No zero point flux available. Check RSR file %s' % self.file
-            sys.exit()
 
         zpflx, zpflxErr = float(zp), float(zperr)
 
@@ -1617,7 +1610,7 @@ class Bandpass:
             iso = h.header[3]
             isofrequency = float(iso)
         except IndexError:
-            sys.exit('No other option for frequency available. Place value in header file')
+            print 'No other option for frequency available. Place value in header file'
 
         return isofrequency
 
@@ -1629,7 +1622,6 @@ class Bandpass:
             zperr = h.header[5]
         except IndexError:
             print 'No zero point flux available. Check RSR file %s' % self.file
-            sys.exit()
 
         zpflx, zpflxErr = float(zp), float(zperr)
 
@@ -1643,7 +1635,7 @@ class Flatbandpass:
         """
 
         if waverange[0] is None or waverange[1] is None:
-            sys.exit('No wavelength range defined for the flat spectrum')
+            raise ValueError('No wavelength range defined for the flat spectrum')
         else:
             self.isoWavelength = cntr
             self.pivotWavelength = cntr

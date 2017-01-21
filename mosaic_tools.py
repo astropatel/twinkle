@@ -72,7 +72,7 @@ class PlottingTools:
                    minortick_width=1.2, majortick_size=8,
                    minortick_size=5, axes_linewidth=1.5,
                    ytick_direction='in', xtick_direction='in',
-                   yaxis_right=False,ylog=False,xlog=False):
+                   yaxis_right=False,ylog=False,xlog=False,bold=False):
 
         """Changes the boring default matplotlib plotting canvas so that it
         looks nice and neat with thicker borders and larger tick marks as well
@@ -104,6 +104,8 @@ class PlottingTools:
 
 
         # plt.rc('text', usetex=True)
+        if bold:
+            plt.rc('font', weight='bold')
         plt.rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
         plt.rcParams['mathtext.fontset'] = 'stixsans'
         axis.tick_params(axis='both', which='major', labelsize=ticklabel_fontsize)
