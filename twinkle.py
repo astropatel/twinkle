@@ -12,6 +12,7 @@ Issues and changes that need to be made:
 
 import os
 import sys
+import copy
 import json
 import logging
 import numpy as np
@@ -33,7 +34,7 @@ except ImportError:
 
 STools = sed.SEDTools()
 
-__author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
+__author__ = 'Rahul I. Patel <ri.patel272@gmail.com>, Joe Trollo'
 
 #  set up constants
 _CS = con.c.to('cm/s')
@@ -269,10 +270,10 @@ class Star:
 
         vegaMagDict_temp, vegaMagErrDict_temp = {}, {}
 
-        mags2use0 = specs['phot']['mags2use0_original'].copy()
-        mags4Phot0 =  specs['phot']['mags4Phot0_original'].copy()
-        mags4scale0 = specs['phot']['mags4scale0_original'].copy()
-        mags4Dust0 = specs['phot']['mags4Dust0'].copy()
+        mags2use0 = copy.copy(specs['phot']['mags2use0_original'])
+        mags4Phot0 =  copy.copy(specs['phot']['mags4Phot0_original'])
+        mags4scale0 = copy.copy(specs['phot']['mags4scale0_original'])
+        mags4Dust0 = copy.copy(specs['phot']['mags4Dust0'])
 
         #  ========================================
         #  Whether to use W3 and W2 to fit photosphere

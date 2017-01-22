@@ -35,7 +35,8 @@ try:
 except ImportError:
     print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
 try:
-    import astropy.io as ai
+    from astropy.io import ascii
+    from astropy.io import fits
 except ImportError:
     print 'Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.'
 
@@ -52,7 +53,7 @@ FT = mt.FittingTools()
 _CS = con.c.to('cm/s')
 _WIEN = con.b_wien.to('K cm')
 _H = con.h.to('erg s')
-_Kb = con.k_B.to('erg/K')
+_KB = con.k_B.to('erg/K')
 
 # SET UP UNIT CONVERSION.
 _CM2ANG = 100000000.0
@@ -276,7 +277,7 @@ class SEDTools:
         elif band == 'Ks2M':
             mab = m_vega + 1.84
         # TAKEN FROM WISE FAQ
-        # http://wise2.ipac.caltech.edu/do_CS/release/allsky/expsup/
+        # http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/
 
         elif band == 'W1':
             mab = m_vega + 2.699
@@ -408,7 +409,7 @@ class SEDTools:
 
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         mag_lam = -2.5 * np.log10(flux / Fiso)
-        mag_lam_err = (1. / Fiso) * (-2.5 / log(10)) * fluxErr / 10 ** (mag_lam / -2.5)
+        mag_lam_err = (1. / Fiso) * (-2.5 / np.log(10)) * fluxErr / 10 ** (mag_lam / -2.5)
         return mag_lam, mag_lam_err
 
     def mag2fluxZPLam(self, band, Vmag, VmagErr, sysErr=False):
@@ -432,7 +433,7 @@ class SEDTools:
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         Flux_lam = Fiso * (10 ** (Vmag / -2.5))
 
-        df_l1 = ((log(10) / -2.5) * Fiso * VmagErr)  # LOG IS NATURAL LOG
+        df_l1 = ((np.log(10) / -2.5) * Fiso * VmagErr)  # LOG IS NATURAL LOG
         if sysErr:
             df_l2 = dFiso
         else:
@@ -466,7 +467,7 @@ class SEDTools:
         Fiso, dFiso = band.fluxVegaZeroPointFreq()
         Flux_nu = Fiso * (10 ** (Vmag / -2.5))
 
-        df_l1 = ((log(10) / -2.5) * Fiso * VmagErr)
+        df_l1 = ((np.log(10) / -2.5) * Fiso * VmagErr)
         if sysErr:
             df_l2 = dFiso
         else:
@@ -651,7 +652,7 @@ class SEDTools:
         if mag2use is None:
             fnew_all_temp = np.array([])  # WILL BE USED TO STORE CALCULATED FLUXES
 
-            lam_arr_all, flux_arr_all = np.log10(lam_arr_all), np.ma.log10(flux_arr_all)
+            lam_arr_all, flux_arr_all = np.log10(lam_arr_all), np.log10(flux_arr_all)
             lambda_ = np.log10(lambda_)
             # GATHER NEW FLUXES FOR EACH TEMPERATURE AT GIVEN g and met
             for i in range(len(lam_arr_all)):
@@ -880,7 +881,7 @@ class SEDTools:
         Flux1, Flux2 = fA[0], fA[1]
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
         gc = _H * _CS / _KB
-        func = exp(gc / (l2 * T0)) - Ratio * exp(gc / (l1 * T0)) - 1 + Ratio
+        func = np.exp(gc / (l2 * T0)) - Ratio * np.exp(gc / (l1 * T0)) - 1 + Ratio
         return func
 
     def calcModTemp(self, T0, lam0, lamArr, flxArr):
@@ -896,10 +897,10 @@ class SEDTools:
         l1, l2 = lA[0], lA[1]
         Flux1, Flux2 = fA[0], fA[1]
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
-        gc = _H * _CS / _Kb
-        func1 = log10(((exp(gc / (l2 * T0)) - 1) / (exp(gc / (l1 * T0)) - 1)) * Ratio ** (-1))
-        func2 = (gc / (T0 * lam0)) * exp(gc / (lam0 * T0)) / (exp(gc / (lam0 * T0)) - 1)
-        func = func1 / (log10(l2 / lam0)) + func2 - 5.
+        gc = _H * _CS / _KB
+        func1 = np.log10(((np.exp(gc / (l2 * T0)) - 1) / (np.exp(gc / (l1 * T0)) - 1)) * Ratio ** (-1))
+        func2 = (gc / (T0 * lam0)) * np.exp(gc / (lam0 * T0)) / (np.exp(gc / (lam0 * T0)) - 1)
+        func = func1 / (np.log10(l2 / lam0)) + func2 - 5.
         return func
 
     def photosphere(self, p0, su2ea2, modelinfo,
@@ -948,7 +949,7 @@ class SEDTools:
         lamcut = xlim
 
         # CREATE SAMPLING POINTS FOR GRID
-        xphot = np.logspace(log10(wave[0]), log10(wave[1]), gridpts)  # angstroms
+        xphot = np.logspace(np.log10(wave[0]), np.log10(wave[1]), gridpts)  # angstroms
 
         # This is only for Kurucz: xphot[angstrom], yphot[erg s-1 cm-2 A-1]
         # CHECK TO SEE IF EXTRAPOLATION IS NECESSARY GIVEN INPUT LIMITS
@@ -1066,7 +1067,7 @@ class SEDTools:
 
         # SURFACE TO OBSERVED FLUX NORMALIZATION WEIGHTED FROM ERRORS
         FluxNorm = np.average(Flx2scale / FluxSED, weights=1. / np.array(Flx2scaleErr))
-        Rad = sqrt(FluxNorm / su2ea2)
+        Rad = np.sqrt(FluxNorm / su2ea2)
         p0 = np.array([p0[0], Rad])  # radius squared
 
         # DEFINE INPUT PARAMETERS IN ORDER TO FIT TEMPERATURE
@@ -1106,13 +1107,13 @@ class SEDTools:
 #  DICTIONARY THAT CONTAINS ALL THE DATA IN THE INPUT JSON FILE.
 
 
-class DataLogisti_CS:
+class DataLogistics:
     """ Set of tools to help with the logistical aspect
     of identifying the photospheric fit to stellar photometry:
     - loading data
     """
 
-    def __init__(self, spe_CS=None, changekeys=True):
+    def __init__(self, specs=None, changekeys=True):
 
         # self.W1_lim, self.W2_lim = 4.5, 2.8
         # self.W3_lim, self.W4_lim = 3.5, -0.4
@@ -1120,13 +1121,13 @@ class DataLogisti_CS:
         # self.J_lim = -1000
         # self.H_lim, self.Ks_lim = -1000, -1000
         # self.B_lim, self.V_lim = -1000, -1000
-        workingdir = directories.WorkingDir(spe_CS['files']['stinfo_topdir'])
+        workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
         
         starfile = os.path.join(workingdir,
-                                spe_CS['files']['stinfo_file'])
+                                specs['files']['stinfo_file'])
 
-        empfile = os.path.join(intpdir,spe_CS['files']['stcolor_dir'],
-                               spe_CS['files']['bv_colorfile'])
+        empfile = os.path.join(intpdir,specs['files']['stcolor_dir'],
+                               specs['files']['bv_colorfile'])
         self.loadAllStars(starfile, changekeys)
         self.loadAllModels()
         self.loadEmpiricalData(empfile)
@@ -1180,7 +1181,7 @@ class DataLogisti_CS:
         """
 
         if len(EmpDat) == 0:#is not None:
-            dfemp = ai.ascii.read(filename,comment='#')
+            dfemp = ascii.read(filename,comment='#')
             EmpDat['dat'] = dfemp
             #dat = EmpDat['test']
 
@@ -1374,7 +1375,7 @@ class GridModels:
 
         for f in filesGrid:
             try:
-                hdui = ai.fits.open(f)
+                hdui = fits.open(f)
                 ti = hdui[0].header['TEFF']
             except:
                 print "Something's wrong with %s" % f
@@ -1445,7 +1446,7 @@ class GridModels:
                     Wavelength: Angstrom
 
 
-        ********** WARNING*******************
+        ********** WARNING *******************
         THERE EXIST POINTS IN THE GRIDS THAT CORRESPOND TO THE SAME DATA POINT IN BOTH LAM AND
         FLUX SPACE -- PROCEED WITH CAUTION IF NAN'S OCCUR
         **************************************
