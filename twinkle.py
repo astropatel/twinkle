@@ -5,7 +5,6 @@
 Issues and changes that need to be made:
  2. Add attributes description to doc string
  3. Fix plot functions to use kwargs
- 4. Remove readcol.,py
  5. Have code use more than Bt-Vt to interpolate mamajek's file
 
 
@@ -91,7 +90,8 @@ class Star:
 
         #  Load data from starfile
         #  Load data from empirical color file
-        assert os.path.isfile(jfile), '%s aint a file yo.' % jfile
+        if not os.path.isfile(jfile):
+            raise ValueError('%s aint a file yo'%jfile)
         try:
             script = open(jfile).read()
             specs = json.loads(script)
@@ -233,7 +233,8 @@ class Star:
                  on first line of the saved SED file.
 
         """
-        assert self.StarPhotosphere, 'Photosphere not created and cant be written out.'
+        if not self.StarPhotosphere:
+            raise ValueError('Photosphere was not created --> cant be written out.')
         filename = self.starname + filename
         with open(filename,'w') as file:
             file.write()
@@ -504,8 +505,10 @@ class Star:
         """
 
         modeltype = (model, grav, met)
-        assert np.array(self.mags4scale).size, 'mags4scale is empty.'
-        assert np.array(self.mags4Phot).size, 'mags4Phot is empty.'
+        if np.array(self.mags4scale).size == 0:
+            raise ValueError('mags4scale is empty.')
+        if np.array(self.mags4Phot).size == 0:
+            raise ValueError('mags4Phot is empty.')
 
         mfitlist = {'photmags': np.array(self.mags4Phot),
                     'scalemags': np.array(self.mags4scale)}
