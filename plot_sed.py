@@ -2,20 +2,24 @@
 # ADJUSTMENT
 
 #  =========================================================
-import os, sed, pdb, sys, random
-import argparse, copy, directories, json
-from time import gmtime, strftime
+import os, sed, random
+import argparse, copy, json
 import matplotlib.pyplot as plt, numpy as np
 import matplotlib.ticker as mtick, math as ma
 from scipy.optimize import bisect
 import mosaic_tools as mt
 from readcol import *
-import wise_flux_correction
-from astro_tools import Constants
+#import wise_flux_correction
 from matplotlib.ticker import MaxNLocator, MultipleLocator
 import load_wfcorrection as lwf
 from mpl_toolkits.axes_grid1 import Grid
 import sed_paramfile as sp
+
+try:
+    from astropy import constants as con
+except ImportError:
+    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
+
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>'
 #  =========================================================
@@ -208,29 +212,31 @@ STools = __import__('sed').SEDTools()
 W13_cut = sp.W13_cut
 W23_cut = sp.W23_cut
 
-con = Constants()
-_cs = con._celeritas
-_h = con._planck
-_kb = con._kb
-_pc2cm = con._pc2cm
-_solrad2cm = con._solrad2cm
-_AU2cm = con._AU2cm
-_ang2micron = con._ang2micron
-_micron2ang = con._micron2ang
-_ang2cm = con._ang2cm
-_Rsun = con._Rsun
-_Lsun = con._Lsun
+_CS = con.c.to('cm/s')
+_H = con.h.to('erg s')
+_KB = con.k_B.to('erg/K')
+_RSUN = con.R_sun.to('cm')
+_LSUN = con.L_sun.to('erg/s')
 
-# const1 & const2 used for fitting in loop
 
-const1 = (_solrad2cm / _pc2cm) ** 2
-const2 = _AU2cm ** 2 / (4 * ma.pi * _pc2cm ** 2)
+#  SET UP UNIT CONVERSION.
+_PC2CM = 3.08568025e+18
+_SOLRAD2CM = 69550000000.0
+_AU2CM = 14959787070000.0
+_ANG2MICRON = 0.0001
+_MICRON2ANG = 1. / _ANG2MICRON
+_ANG2CM = 1e-8
+
+# CONST_1 & CONST_2 used for fitting in loop
+
+CONST_1 = (_SOLRAD2CM / _PC2CM) ** 2
+CONST_2 = _AU2CM ** 2 / (4 * np.pi * _PC2CM ** 2)
 #  ====================================
 #             CONSTANTS
 #  ====================================
 
-wave_min = sp.wave_min * _micron2ang
-wave_max = sp.wave_max * _micron2ang
+wave_min = sp.wave_min * _MICRON2ANG
+wave_max = sp.wave_max * _MICRON2ANG
 # PLOT LIMITS IN erg/s/cm^2
 ylim_up, ylim_low = sp.ylim_up, sp.ylim_low
 xmax = sp.xmax   # PLOT LIMITS IN MICRONS
@@ -353,8 +359,8 @@ for i, useind in enumerate(f_ind):
     # Takes into account solar units, so radius only needs to be in solar units
     # This is to facilitate the fitting procedure.
 
-    su2ea2 = const1 / disti ** 2
-    su2ea_dust = const2 / disti ** 2
+    su2ea2 = CONST_1 / disti ** 2
+    su2ea_dust = CONST_2 / disti ** 2
     b1RJ, b2RJ = 'N/A/', 'N/A'
 
     p0 = np.array([T0])  # FOR PHOTOSPHERE
@@ -438,7 +444,7 @@ for i, useind in enumerate(f_ind):
     #  =====================================================================================
 
     # FULL BBODY - ANGSTROMS
-    # set conv = 1/_ang2micron
+    # set conv = 1/_ANG2MICRON
     # convert input wavelength into angstrom
     # XPHOT: Angstrom, YPHOT: erg s^-1 cm^-2 A^-1, same with slope and yint
     xphot, yphot = STools.photosphere(p0, su2ea2, modeli,
@@ -499,7 +505,7 @@ for i, useind in enumerate(f_ind):
             Oflux = df[band + '_flux'][i_other].split('pm')
             flux[band + '_flux'] = float(Oflux[0])
             fluxerr[band + '_flux'] = float(Oflux[1])
-            wave[band] = df[band + '_lam'][i_other] * _micron2ang
+            wave[band] = df[band + '_lam'][i_other] * _MICRON2ANG
 
     else:
         pass
@@ -575,7 +581,7 @@ for i, useind in enumerate(f_ind):
         # SORT BY WAVELENGTH INCREASING
         sortedBands = np.array(sorted(Lam_Excess.items(), key=lambda x: x[1]))
         bandSorted = sortedBands[:, 0]
-        lamSorted = sortedBands[:, 1].astype('float32') * _ang2cm
+        lamSorted = sortedBands[:, 1].astype('float32') * _ANG2CM
         flxSorted = []
         testExFlux = []
 
@@ -617,7 +623,7 @@ for i, useind in enumerate(f_ind):
 
             if len(SOBJ.mags4Dust) == 2:
                 bandlow, bandhi = bandSorted[0], bandSorted[1]
-                lam1, lam2 = lamSorted  # Lam_Excess[bandlow]*_ang2cm, Lam_Excess[bandhi]*_ang2cm
+                lam1, lam2 = lamSorted  # Lam_Excess[bandlow]*_ANG2CM, Lam_Excess[bandhi]*_ANG2CM
                 # flx1,flx2 = ExcessFlux[bandlow], ExcessFlux[bandhi]
                 # arr1,arr2 = np.array([lam1,lam2]),np.array([flx1,flx2])
                 arr1, arr2 = lamSorted, flxSorted  # np.array([lam1,lam2]),np.array([flx1,flx2])
@@ -650,7 +656,7 @@ for i, useind in enumerate(f_ind):
 
     sortedBands = np.array(sorted(Lam_Excess.items(), key=lambda x: x[1]))
     bandSorted = sortedBands[:, 0]
-    lamSorted = sortedBands[:, 1].astype('float32') * _ang2cm
+    lamSorted = sortedBands[:, 1].astype('float32') * _ANG2CM
     # bandlow, bandhi = bandSorted[0],bandSorted[1]
     flxSorted = []
     testExFlux = []
@@ -721,8 +727,8 @@ for i, useind in enumerate(f_ind):
 
     elif calcBB_bool:  # CALCULATE A BLACKBODY TO 2 FLUX POINTS -- MAINLY W3 AND W4
 
-        alphaCon = 2 * _h * _cs ** 2
-        gammaCon = _h * _cs / _kb
+        alphaCon = 2 * _H * _CS ** 2
+        gammaCon = _H * _CS / _KB
 
         lamArr = np.array([Lam_Excess[bandlow], Lam_Excess[bandhi]])
         flxArr = np.array([ExcessFlux[bandlow], ExcessFlux[bandhi]])
@@ -743,16 +749,16 @@ for i, useind in enumerate(f_ind):
         p0_dust = np.array([tempnew_dust])
 
     elif W3Excess_bool:
-        alphaCon = 2 * _h * _cs ** 2
-        gammaCon = _h * _cs / _kb
+        alphaCon = 2 * _H * _CS ** 2
+        gammaCon = _H * _CS / _KB
         l1band, l2band = 'W3', 'W4'
         # l1band, l2band ='W1','W2'
-        lam1, lam2 = wave[l1band] * _ang2cm, wave[l2band] * _ang2cm
-        lamArr = np.array([wave[l1band], wave[l2band]]) * _ang2cm
+        lam1, lam2 = wave[l1band] * _ANG2CM, wave[l2band] * _ANG2CM
+        lamArr = np.array([wave[l1band], wave[l2band]]) * _ANG2CM
         flxArr = np.array([ExcessFlux[l1band], ExcessFlux[l2band]])
         args = (lam1, lamArr, flxArr)
         tempnew_dust = bisect(STools.calcModTemp, 1., 10000., args=args)
-        su2ea_dust = (ExcessFlux[l1band] * lam1 ** 5 / (_ang2cm * alphaCon)) * \
+        su2ea_dust = (ExcessFlux[l1band] * lam1 ** 5 / (_ANG2CM * alphaCon)) * \
                      (ma.exp(gammaCon / (lam1 * tempnew_dust)) - 1)
         beta = (gammaCon / (tempnew_dust * lam1)) * \
                (ma.exp(gammaCon / (lam1 * tempnew_dust)) / (ma.exp(gammaCon / (lam1 * tempnew_dust)) - 1.)) \
@@ -801,8 +807,8 @@ for i, useind in enumerate(f_ind):
     #                 CALCULATE & SET UP LINES TO PLOT
     #  =====================================================================================
     norm_star = (radius) ** 2 * su2ea2
-    Lbol_star = (4 * ma.pi * (radius * _Rsun) ** 2) * np.trapz((yphot / _ang2cm) / norm_star,
-                                                                   xphot * _ang2cm)
+    Lbol_star = (4 * ma.pi * (radius * _RSUN) ** 2) * np.trapz((yphot / _ANG2CM) / norm_star,
+                                                                   xphot * _ANG2CM)
     if not dontdraw_bool:
         if W3Excess_bool:
             lightW4_line = STools.modifiedBB(dust_lambda, p0_dust, su2ea_dust, lam0=lam0, beta=beta)
@@ -831,13 +837,13 @@ for i, useind in enumerate(f_ind):
         #  dust_fullint = (su2ea_dust*2*_c*con._kb*tempnew_dust) / (3*xphot.max()*_micron2cm)**3
         #  star_fullint = (p0[1]**2*su2ea2*2*_c*con._kb*tempnew)/(3*xphot.max()*_micron2cm)**3
         tau = np.trapz(lightW4_line, dust_lambda) / np.trapz(yphot, xphot)
-        radius_dust = (278.3 / tempnew_dust) ** 2 * ma.sqrt(Lbol_star / _Lsun)
+        radius_dust = (278.3 / tempnew_dust) ** 2 * ma.sqrt(Lbol_star / _LSUN)
 
     else:
         indmax = np.where(yphot == yphot.max())[0][0]
         Fstar_max, wavestar_max = yphot[indmax], xphot[indmax]
         tempnew_dust = STools.wienTEMP(wave['W3'], units='angstrom')
-        radius_dust = (278.3 / tempnew_dust) ** 2 * ma.sqrt(Lbol_star / _Lsun)
+        radius_dust = (278.3 / tempnew_dust) ** 2 * ma.sqrt(Lbol_star / _LSUN)
         PhotW3 = STools.rsr_flux(eval('STools.W3pband'), xphot, yphot)[0]
         ExcessFluxW3 = flux['W3_flux'] - PhotW3
         tau = (ExcessFluxW3 * wave['W3']) / (Fstar_max * wavestar_max)
@@ -932,7 +938,7 @@ for i, useind in enumerate(f_ind):
                            RelativeW3flux, RelativeW4flux, e_RelaW4Flux, e_RelaW3Flux, \
                            w3f_mjy, w3fe_mjy, w3phot_mjy, w4f_mjy, w4fe_mjy, w4phot_mjy, \
                            w3upbool, w4upbool, kcor_w3, kcor_w4, \
-                           ma.log10(Lbol_star / _Lsun), tempnew, radius, chi2, radius_dust, tempnew_dust, tau))
+                           ma.log10(Lbol_star / _LSUN), tempnew, radius, chi2, radius_dust, tempnew_dust, tau))
 
         try:
             print 'beta= ', p0_dust[2]
@@ -955,7 +961,7 @@ for i, useind in enumerate(f_ind):
 
         x = wavex
         y = fluxy * wavex
-        x = wavex * _ang2micron
+        x = wavex * _ANG2MICRON
         yerr = fluxerry * wavex
 
         if not sp.plot_single and sp.plot_grid:
@@ -1006,10 +1012,10 @@ for i, useind in enumerate(f_ind):
             #                PLOT ANYTHING DEALING WITH PHOTOSPHERE
             #  ==============================================================================================
             if RJ_On:
-                ax.plot((xphot * _ang2micron), (yphot * xphot), 'b--', lw=1)
+                ax.plot((xphot * _ANG2MICRON), (yphot * xphot), 'b--', lw=1)
             else:
                 plot_photosphere(ax, SOBJ.mags4Dust, xphot, yphot, wave,
-                                 PhotDust_Flux, _ang2micron, ptsize, lw=1)
+                                 PhotDust_Flux, _ANG2MICRON, ptsize, lw=1)
             # ==============================================================================================
             #                PLOT ANYTHING DEALING WITH BLACKBODY (DUST)
             #  ==============================================================================================
@@ -1021,7 +1027,7 @@ for i, useind in enumerate(f_ind):
                     ind_plotbb = np.where(dust_lambda >= 2000.0)[0]
                 dust_lambda, lightW4_line = dust_lambda[ind_plotbb], lightW4_line[ind_plotbb]
                 plot_blackbody(ax, wave, ExcessFlux, dust_lambda,
-                               lightW4_line, _ang2micron, ptsize, 2)
+                               lightW4_line, _ANG2MICRON, ptsize, 2)
 
             else:
                 pass
@@ -1031,7 +1037,7 @@ for i, useind in enumerate(f_ind):
 
             xi, yi = xphot, fullspectrum
             plot_observedData(ax, SOBJ.mags4Phot, xi, yi, wave,
-                              flux, fluxerr,_ang2micron, ptsize, cps, 1)
+                              flux, fluxerr,_ANG2MICRON, ptsize, cps, 1)
 
             #  ==============================================================================================
             #  plot_annotations(ax, star,spti,tempnew, tempnew_dust,beta,
@@ -1077,10 +1083,10 @@ for i, useind in enumerate(f_ind):
             #                PLOT ANYTHING DEALING WITH PHOTOSPHERE
             #  ==============================================================================================
             if RJ_On:
-                ax.plot((xphot * _ang2micron), (yphot * xphot), 'b--', lw=1)
+                ax.plot((xphot * _ANG2MICRON), (yphot * xphot), 'b--', lw=1)
             else:
                 plot_photosphere(ax, SOBJ.mags4Dust, xphot, yphot, wave,
-                                 PhotDust_Flux, _ang2micron, ptsize, lw=1)
+                                 PhotDust_Flux, _ANG2MICRON, ptsize, lw=1)
 
             # ==============================================================================================
             #                PLOT ANYTHING DEALING WITH BLACKBODY (DUST)
@@ -1093,7 +1099,7 @@ for i, useind in enumerate(f_ind):
                     ind_plotbb = np.where(dust_lambda >= 2000.0)[0]
                 dust_lambda, lightW4_line = dust_lambda[ind_plotbb], lightW4_line[ind_plotbb]
                 plot_blackbody(ax, wave, ExcessFlux, dust_lambda,
-                               lightW4_line, _ang2micron, ptsize, 2)
+                               lightW4_line, _ANG2MICRON, ptsize, 2)
 
             else:
                 pass
@@ -1103,7 +1109,7 @@ for i, useind in enumerate(f_ind):
 
             xi, yi = xphot, fullspectrum
             plot_observedData(ax, mags4Phot0, xi, yi, wave, flux,
-                              fluxerr, _ang2micron, ptsize, cps, 1)
+                              fluxerr, _ANG2MICRON, ptsize, cps, 1)
 
             #  ==============================================================================================
 
