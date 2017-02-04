@@ -13,19 +13,18 @@
   1. Remove mpfit and use internal scipy fitting routine.
   2. vega2AB needs to be updated or deprecated.
   3. Add logger -- DONT' NEED FOR THIS ONE
-  4. remove readcol.py
+  4. remove readcol.py -- DONE, NOT TESTED
   5. reamove astro_tools
   6. Include Joe in author list
   7. Change init to only load pband files from mags2use.
 """
 
-import os
+import os, re
 import operator
-import glob
+import glob, string
 import directories
 import numpy as np
 
-from readcol import *
 import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
@@ -1150,8 +1149,8 @@ class DataLogistics:
         """
         if len(StarsDat) == 0:
 
-            dat = readcol(starfile, asdict=True)
-            colnames = np.array(dat.keys())
+            dat = np.genfromtxt(starfile,names=True, dtype=None)
+            colnames = list(dat.dtype.names)
             for name in colnames:
                 StarsDat[name] = dat[name]
 
@@ -1266,7 +1265,7 @@ class GridModels:
         gravArr = np.array([])
 
         for f in filesGrid:
-            lam, flux = readcol(f, twod=False)
+            lam, flux = np.loadtxt(f,unpack=True)
             gridInfo = string.split(os.path.basename(f), '_')
             # print gridInfo
             ti = float(gridInfo[1])
@@ -1521,7 +1520,9 @@ class Bandpass:
 
         """
         self.file = fileName
-        df = readcol(self.file, asdict=True, verbose=False, skipline=1)
+
+        df = np.genfromtxt(self.file,skip_header=1,names=True)
+
         self.wavelength = df['wav']
         self.transmission = df['trans']
 
@@ -1551,6 +1552,32 @@ class Bandpass:
 
         self.interpolator = intp.interp1d(self.wavelength, self.transmission, kind='linear')
 
+        self.zmdata = self.metaPassDat(self.file)
+
+    def metaPassDat(self,dfile):
+        """
+        This will extract the first line in the RSR data files that contains the zero point
+        wavelengths, frequencies and fluxes, denoted by the string '#!'
+
+        Parameters
+        ----------
+        dfile : string that points to the file name of the RSR bandpass.
+
+        Returns
+        -------
+        list of zero point data. Check readme file in RSR file for more information.
+
+        """
+
+        f = open(dfile)
+        first = f.readline()
+
+        self.S = re.compile('^#\!|\[[0-9]+\]\/|\[ *\w *, *\w+ *\]\/')
+        header = re.split(self.S,first)[1:-1]
+        zmdata = map(string.strip,header)
+
+        return zmdata
+
     def rescale(self, maxTransmission):
         """ Rescales passband so that maximum value of the transmission is equal to
             maxTransmission
@@ -1575,12 +1602,12 @@ class Bandpass:
         bandpass. The isophotal wavelength is kept under # !NNNNN.NN[0,f]/ in
         the first line of the bandpass file.
         """
-        h = Header(self.file)
         try:
-            iso = h.header[0]
-            isowavelength = float(iso)
+            isowavelength = float(self.zmdata[0]) # h.header[0]
+
         except IndexError:
             isowavelength = self.pivotWavelength()
+            print 'Error in extracting isowavelength. Using pivotWavelength instead for at %.5f' %isowavelength
 
         return isowavelength
 
@@ -1593,23 +1620,20 @@ class Bandpass:
         respectively.
         """
 
-        h = Header(self.file)
         try:
-            zp = h.header[1]
-            zperr = h.header[2]
+            zp = self.zmdata[1]
+            zperr = self.zmdata[2]
         except IndexError:
             print 'No zero point flux available. Check RSR file %s' % self.file
 
         zpflx, zpflxErr = float(zp), float(zperr)
 
-        return (zpflx, zpflxErr)
+        return zpflx, zpflxErr
 
     def isoFrequency(self):
 
-        h = Header(self.file)
         try:
-            iso = h.header[3]
-            isofrequency = float(iso)
+            isofrequency = float(self.zmdata[3])
         except IndexError:
             print 'No other option for frequency available. Place value in header file'
 
@@ -1617,16 +1641,16 @@ class Bandpass:
 
     def fluxVegaZeroPointFreq(self):
 
-        h = Header(self.file)
+
         try:
-            zp = h.header[4]
-            zperr = h.header[5]
+            zp = self.zmdata[4]
+            zperr = self.zmdata[5] 
         except IndexError:
             print 'No zero point flux available. Check RSR file %s' % self.file
 
         zpflx, zpflxErr = float(zp), float(zperr)
 
-        return (zpflx, zpflxErr)
+        return zpflx, zpflxErr
 
 
 class Flatbandpass:

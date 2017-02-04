@@ -100,7 +100,9 @@ class Star:
             logging.info('JSON is trippin cause of, ', Err)
             raise ValueError(Err)
 
-        if sed.StarsDat is not None:
+        # CHECK TO SEE IF DICTIONARY OF STELLAR DATA HAS BEEN POPULATED
+        if not sed.StarsDat:
+            # THIS RUNS THE ENTIRE PROCESS OF LOADING AND SAVING THE EMPIRICAL DATA
             sed.DataLogistics(specs)
 
         self.starsdat = sed.StarsDat
@@ -145,6 +147,7 @@ class Star:
         elif self.sid is not None and self.starname is not None:
             raise ValueError('Provide either name of location index, not both.')
         logging.info('WORKING STAR:%s'%self.starname)
+
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
         # vegaMagDict and errdict ARE FILLED UP HERE.
