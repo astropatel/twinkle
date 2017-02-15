@@ -13,10 +13,10 @@
   1. Remove mpfit and use internal scipy fitting routine.
   2. vega2AB needs to be updated or deprecated.
   3. Add logger -- DONT' NEED FOR THIS ONE
-  4. remove readcol.py -- DONE, NOT TESTED
+  4. remove readcol.py -- DONE, Tested
   5. reamove astro_tools
-  6. Include Joe in author list
   7. Change init to only load pband files from mags2use.
+  8. Calc_temp needs better docstring
 """
 
 import os, re
@@ -42,7 +42,7 @@ except ImportError:
 __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
 DIR = directories
-
+opj = os.path.join
 intpdir = DIR.Interpolation_Files()
 fRSR = DIR.RSR()
 AT = mt.ArrayTools()
@@ -103,64 +103,69 @@ class SEDTools:
          cntr: center or isophotal wavelength of the flat bandpass.
          """
 
-        units = {'WISE': 'microns', '2MASS': 'microns', 'Johnson': 'angstroms', 'MIPS': 'microns', \
-                 'Tycho': 'angstroms', 'IRAS': 'angstroms', 'HPACS': 'angstroms'}
+        units = {'WISE': 'microns', '2MASS': 'microns', 'Johnson': 'angstroms',
+                 'MIPS': 'microns', 'Tycho': 'angstroms', 'IRAS': 'angstroms',
+                 'HPACS': 'angstroms', 'Akari':'angstroms'}
+
         aspband = Bandpass
         if RSRFile is None and not flat:
 
             #  MICRONS
             u = units['WISE']
-            self.W1pband = aspband(os.path.join(fRSR, 'W1_WISE.dat'), inputUnits=u)
-            self.W2pband = aspband(os.path.join(fRSR, 'W2_WISE.dat'), inputUnits=u)
-            self.W3pband = aspband(os.path.join(fRSR, 'W3_WISE.dat'), inputUnits=u)
-            self.W4pband = aspband(os.path.join(fRSR, 'W4_WISE.dat'), inputUnits=u)
-            self.W4truncpband = aspband(os.path.join(fRSR, 'W4_WISE_truncated.dat'), inputUnits=u)
-            self.W4stretchpband = aspband(os.path.join(fRSR, 'W4_WISE_stretched.dat'), inputUnits=u)
+            self.W1pband = aspband(opj(fRSR, 'W1_WISE.dat'), inputUnits=u)
+            self.W2pband = aspband(opj(fRSR, 'W2_WISE.dat'), inputUnits=u)
+            self.W3pband = aspband(opj(fRSR, 'W3_WISE.dat'), inputUnits=u)
+            self.W4pband = aspband(opj(fRSR, 'W4_WISE.dat'), inputUnits=u)
+            self.W4truncpband = aspband(opj(fRSR, 'W4_WISE_truncated.dat'), inputUnits=u)
+            self.W4stretchpband = aspband(opj(fRSR, 'W4_WISE_stretched.dat'), inputUnits=u)
 
             #  MICRONS
             u = units['MIPS']
-            self.MIPS24pband = aspband(os.path.join(fRSR, '24_MIPS.dat'), inputUnits=u)
-            self.MIPS70pband = aspband(os.path.join(fRSR, '70_MIPS.dat'), inputUnits=u)
-            self.MIPS160pband = aspband(os.path.join(fRSR, '160_MIPS.dat'), inputUnits=u)
+            self.MIPS24pband = aspband(opj(fRSR, '24_MIPS.dat'), inputUnits=u)
+            self.MIPS70pband = aspband(opj(fRSR, '70_MIPS.dat'), inputUnits=u)
+            self.MIPS160pband = aspband(opj(fRSR, '160_MIPS.dat'), inputUnits=u)
 
             #  MICRONS
             u = units['2MASS']
-            self.J2Mpband = aspband(os.path.join(fRSR, 'J_2MASS.dat'), inputUnits=u)
-            self.H2Mpband = aspband(os.path.join(fRSR, 'H_2MASS.dat'), inputUnits=u)
-            self.Ks2Mpband = aspband(os.path.join(fRSR, 'Ks_2MASS.dat'), inputUnits=u)
+            self.J2Mpband = aspband(opj(fRSR, 'J_2MASS.dat'), inputUnits=u)
+            self.H2Mpband = aspband(opj(fRSR, 'H_2MASS.dat'), inputUnits=u)
+            self.Ks2Mpband = aspband(opj(fRSR, 'Ks_2MASS.dat'), inputUnits=u)
 
             #  ANGSTROMS
             u = units['Johnson']
-            self.UBpband = aspband(os.path.join(fRSR, 'U_Bessel.dat'), inputUnits=u)
-            self.BBpband = aspband(os.path.join(fRSR, 'B_Bessel.dat'), inputUnits=u)
-            self.VBpband = aspband(os.path.join(fRSR, 'V_Bessel.dat'), inputUnits=u)
-            self.RBpband = aspband(os.path.join(fRSR, 'R_Bessel.dat'), inputUnits=u)
-            self.IBpband = aspband(os.path.join(fRSR, 'I_Bessel.dat'), inputUnits=u)
+            self.UBpband = aspband(opj(fRSR, 'U_Bessel.dat'), inputUnits=u)
+            self.BBpband = aspband(opj(fRSR, 'B_Bessel.dat'), inputUnits=u)
+            self.VBpband = aspband(opj(fRSR, 'V_Bessel.dat'), inputUnits=u)
+            self.RBpband = aspband(opj(fRSR, 'R_Bessel.dat'), inputUnits=u)
+            self.IBpband = aspband(opj(fRSR, 'I_Bessel.dat'), inputUnits=u)
 
-            self.UJpband = aspband(os.path.join(fRSR, 'U_Johnson.dat'), inputUnits=u)
-            self.BJpband = aspband(os.path.join(fRSR, 'B_Johnson.dat'), inputUnits=u)
-            self.VJpband = aspband(os.path.join(fRSR, 'V_Johnson.dat'), inputUnits=u)
-            self.RJpband = aspband(os.path.join(fRSR, 'R_Johnson.dat'), inputUnits=u)
-            self.IJpband = aspband(os.path.join(fRSR, 'I_Johnson.dat'), inputUnits=u)
+            self.UJpband = aspband(opj(fRSR, 'U_Johnson.dat'), inputUnits=u)
+            self.BJpband = aspband(opj(fRSR, 'B_Johnson.dat'), inputUnits=u)
+            self.VJpband = aspband(opj(fRSR, 'V_Johnson.dat'), inputUnits=u)
+            self.RJpband = aspband(opj(fRSR, 'R_Johnson.dat'), inputUnits=u)
+            self.IJpband = aspband(opj(fRSR, 'I_Johnson.dat'), inputUnits=u)
 
             u = units['Tycho']
-            self.VTpband = aspband(os.path.join(fRSR, 'V_Tycho.dat'), inputUnits=u)
-            self.BTpband = aspband(os.path.join(fRSR, 'B_Tycho.dat'), inputUnits=u)
-            self.Hppband = aspband(os.path.join(fRSR, 'Hp.dat'), inputUnits=u)
+            self.VTpband = aspband(opj(fRSR, 'V_Tycho.dat'), inputUnits=u)
+            self.BTpband = aspband(opj(fRSR, 'B_Tycho.dat'), inputUnits=u)
+            self.Hppband = aspband(opj(fRSR, 'Hp.dat'), inputUnits=u)
 
             u = units['IRAS']
-            self.IRAS60pband = aspband(os.path.join(fRSR, '60_IRAS.dat'), inputUnits=u)
-            self.IRAS100pband = aspband(os.path.join(fRSR, '100_IRAS.dat'), inputUnits=u)
-            self.IRAS25pband = aspband(os.path.join(fRSR,'25_IRAS.dat'), inputUnits=u)
-            self.IRAS12pband = aspband(os.path.join(fRSR,'12_IRAS.dat'), inputUnits=u)
+            self.IRAS60pband = aspband(opj(fRSR, '60_IRAS.dat'), inputUnits=u)
+            self.IRAS100pband = aspband(opj(fRSR, '100_IRAS.dat'), inputUnits=u)
+            self.IRAS25pband = aspband(opj(fRSR,'25_IRAS.dat'), inputUnits=u)
+            self.IRAS12pband = aspband(opj(fRSR,'12_IRAS.dat'), inputUnits=u)
 
             u = units['HPACS']
-            self.HPACS70pband = aspband(os.path.join(fRSR, '70_HPACS.dat'), inputUnits=u)
-            self.HPACS100pband = aspband(os.path.join(fRSR, '100_HPACS.dat'), inputUnits=u)
-            self.HPACS160pband = aspband(os.path.join(fRSR, '160_HPACS.dat'), inputUnits=u)
+            self.HPACS70pband = aspband(opj(fRSR, '70_HPACS.dat'), inputUnits=u)
+            self.HPACS100pband = aspband(opj(fRSR, '100_HPACS.dat'), inputUnits=u)
+            self.HPACS160pband = aspband(opj(fRSR, '160_HPACS.dat'), inputUnits=u)
+
+            u = units['Akari']
+            self.Akari90pband = aspband(opj(fRSR,'90_Akari.dat'), inputUnits=u)
 
         elif RSRFile is not None and not flat:
-            self.pband = aspband(os.path.join(fRSR, RSRFile), inputUnits=u)
+            self.pband = aspband(opj(fRSR, RSRFile), inputUnits=u)
         elif flat:
             self.pband = Flatbandpass(waverange, cntr)
 
@@ -636,7 +641,7 @@ class SEDTools:
         except:
             resample = resample
 
-        x = lambda_
+
         mags2use = mag2use
         grids, TempsArr = griddata, tempArr
         indLeft, indRight = self.indSandwhich(temp0, TempsArr)
@@ -679,7 +684,8 @@ class SEDTools:
 
                 if pband.isoWavelength() > 110000 and resample:
                     lam_arr_all, flux_arr_all = FT.resample_model(lam_arr_all, flux_arr_all,
-                                                                  min(pband.wavelength), max(pband.wavelength), \
+                                                                  min(pband.wavelength),
+                                                                  max(pband.wavelength),
                                                                   pband=pband)
 
                 Mflux = self.rsr_flux(pband, lam_arr_all, flux_arr_all)
@@ -766,11 +772,11 @@ class SEDTools:
         # CHECK PARAMETERS AND NORMALIZATION
         try:
             su2ea = (p0[1] ** 2) * su2ea1
-        except:
+        except IndexError:
             su2ea = su2ea1
         try:
             bulk = kwargs['bulk']
-        except:
+        except KeyError:
             bulk = False
         # IF CONVOLVING TO FILTER TRANSMISSION, X SHOULD CONFORM TO LENGTH
         # TRANSMISSION CURVE
@@ -1103,6 +1109,43 @@ class SEDTools:
 
         return radius,tempnew,mf
 
+    def calc_temp(self, y, yerr, x, temparr, kw_cor):
+        """
+
+        Parameters
+        ----------
+        y : array of fluxes
+        yerr: array of uncertaintiy in fluxes
+        x: string array denoting bands
+        temparr: arrays of temperatures
+        kw_cor: dictionary of stuff from load_wfcorrection
+
+        Returns
+        -------
+        res: residuals
+        FluxNormed: flux normalized to blackbody fluxes
+        alpha : array of chi2 calculations.
+
+        """
+        fluxNormed = []
+        kcorList = []
+
+        #  x should be list of strings with band info
+        for bd in x:
+            fluxNormed.append(np.array(kw_cor['F_cor_%s' % bd]))
+            kcorList.append(np.array(kw_cor['kcor_%s' % bd]))
+
+        kcorList = np.array(kcorList).transpose()
+        Predicted = np.array(fluxNormed)
+        a, b = Predicted[0], Predicted[1]
+        x0, y0 = y[0], y[1]
+        sigx, sigy = yerr[0], yerr[1]
+        alpha = ((a * x0 / sigx ** 2) + (b * y0 / sigy ** 2)) / ((a / sigx) ** 2 + (b / sigy) ** 2)
+
+        FluxNormed = (alpha * (Predicted.transpose() * kcorList).transpose()).transpose()
+        res = np.subtract(FluxNormed, y)
+        return res, FluxNormed, alpha
+
 #  DICTIONARY THAT CONTAINS ALL THE DATA IN THE INPUT JSON FILE.
 
 
@@ -1122,10 +1165,9 @@ class DataLogistics:
         # self.B_lim, self.V_lim = -1000, -1000
         workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
         
-        starfile = os.path.join(workingdir,
-                                specs['files']['stinfo_file'])
+        starfile = opj(workingdir, specs['files']['stinfo_file'])
 
-        empfile = os.path.join(intpdir,specs['files']['stcolor_dir'],
+        empfile = opj(intpdir,specs['files']['stcolor_dir'],
                                specs['files']['bv_colorfile'])
         self.loadAllStars(starfile, changekeys)
         self.loadAllModels()
@@ -1149,7 +1191,8 @@ class DataLogistics:
         """
         if len(StarsDat) == 0:
 
-            dat = np.genfromtxt(starfile,names=True, dtype=None)
+            dat = np.genfromtxt(starfile, names=True, dtype=None)
+            dat = dat.flatten()
             colnames = list(dat.dtype.names)
             for name in colnames:
                 StarsDat[name] = dat[name]
@@ -1249,13 +1292,13 @@ class GridModels:
          """
         # CHECK FORMAT OF GRAV AND METALLICITY
 
-        gdir = os.path.join(intpdir, model)
+        gdir = opj(intpdir, model)
 
         if grav is None:  # COLLECT ALL FILES OF ANY GRAV -- MEANT TO BE USED TO KEEP GRAV AS FREE PARAMETERS
-            filesGrid = glob.glob(os.path.join(gdir, 'lteNextGen*_%.1f%s' % (met, ext)))
+            filesGrid = glob.glob(opj(gdir, 'lteNextGen*_%.1f%s' % (met, ext)))
         else:
             grav = grav / 10.
-            filesGrid = glob.glob(os.path.join(gdir, 'lteNextGen*_%.1f_%.1f%s' % (grav, met, ext)))
+            filesGrid = glob.glob(opj(gdir, 'lteNextGen*_%.1f_%.1f%s' % (grav, met, ext)))
 
         if len(filesGrid) < 1:
             raise ValueError('There were no files matching your criteria. Try again.')
@@ -1362,10 +1405,10 @@ class GridModels:
             met = 'p0' + met
 
         # CHANGE DIRECTORY TO NEEDED METALLICITY FILE
-        dir = os.path.join(intpdir, model, 'k' + met)
+        dir = opj(intpdir, model, 'k' + met)
         # THIS SELECTS OUT ONLY THE FILES THAT MEET THE METALLICITY
         # CRITERIA
-        filesGrid = glob.glob(os.path.join(dir, 'k' + met + '*.fits'))
+        filesGrid = glob.glob(opj(dir, 'k' + met + '*.fits'))
         if len(filesGrid) < 1:
             raise ValueError('There were no files matching your criteria. Try again.')
 
@@ -1453,17 +1496,17 @@ class GridModels:
 
         conv2ang = 1e8
 
-        newdir = os.path.join(intpdir, 'NextGen2')
+        newdir = opj(intpdir, 'NextGen2')
         # os.mkdir(newdir)
         dir = '~/Desktop/PHOENIX'
         if (met == 'all') and (grav == 'all'):
-            filesGrid = glob.glob(os.path.join(dir, 'lte*.NextGen%s' % ext))
+            filesGrid = glob.glob(opj(dir, 'lte*.NextGen%s' % ext))
         elif (met == 'all') and (grav != 'all'):
-            filesGrid = glob.glob(os.path.join(dir, 'lte*-%.1f-*.NextGen%s' % (grav, ext)))
+            filesGrid = glob.glob(opj(dir, 'lte*-%.1f-*.NextGen%s' % (grav, ext)))
         elif (met != 'all') and (grav == 'all'):
-            filesGrid = glob.glob(os.path.join(dir, 'lte*-%.1f.NextGen%s' % (met, ext)))
+            filesGrid = glob.glob(opj(dir, 'lte*-%.1f.NextGen%s' % (met, ext)))
         elif (met != 'all') and (grav != 'all'):
-            filesGrid = glob.glob(os.path.join(dir, 'lte*-%.1f-%.1f.NextGen%s' % (grav, met, ext)))
+            filesGrid = glob.glob(opj(dir, 'lte*-%.1f-%.1f.NextGen%s' % (grav, met, ext)))
         else:
             pass
 
@@ -1495,8 +1538,7 @@ class GridModels:
                     wavKeep, fluxKeep = wave, flux
                     # units of erg/s/cm^2/Angstrom
                     DataOut = np.column_stack((wavKeep, ((fluxKeep) / conv2ang)))
-                    fileout = os.path.join(newdir,
-                                           'lteNextGen_%.1f_%.1f_%.1f.txt' % (temp, grav, met))
+                    fileout = opj(newdir, 'lteNextGen_%.1f_%.1f_%.1f.txt' % (temp, grav, met))
                     np.savetxt(fileout, DataOut)
                 else:
                     pass
@@ -1507,17 +1549,18 @@ GMod = GridModels()
 
 class Bandpass:
     def __init__(self, fileName, normalise=True, inputUnits='angstroms'):
-        """This code loads a passband file with wavelength in the first column
-        and the RSR transmission data for that particular bandpass. The first line
-        should be in the form of # !NNNNN.NN[0,f]/ where NNNN.NN is the isophotal wavelength
-        in angstroms for this particular bandpass. Even if no isophotal wavelength is listed
-        still have the !#  part in there. The second line should have the column
-        headings "wav" "trans".
+        """This code loads a passband file with wavelength in the first
+          column and the RSR transmission data for that particular
+          bandpass. The first line should be in the form of
+          #!NNNNN.NN[0,f]/ where NNNN.NN is the isophotal wavelength in
+          angstroms for this particular bandpass. Even if no isophotal
+          wavelength is listed still have the !#  part in there. The
+          second line should have the column headings "wav" "trans".
 
-        Converts the input file wavelength to angstroms. You can tell the code
-        which units the file is in and it will convert to angstroms. Options are:
-        nanometers, microns, mm, GHz inputted as a string
-
+          Converts the input file wavelength to angstroms. You can tell
+          the code which units the file is in and it will convert to
+          angstroms.
+          Options are: nanometers, microns, mm, GHz inputted as a string.
         """
         self.file = fileName
 
@@ -1644,7 +1687,7 @@ class Bandpass:
 
         try:
             zp = self.zmdata[4]
-            zperr = self.zmdata[5] 
+            zperr = self.zmdata[5]
         except IndexError:
             print 'No zero point flux available. Check RSR file %s' % self.file
 

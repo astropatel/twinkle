@@ -7,7 +7,6 @@ Issues and changes that need to be made:
  3. Fix plot functions to use kwargs
  5. Have code use more than Bt-Vt to interpolate mamajek's file
 
-
 """
 
 import os
@@ -18,6 +17,8 @@ import logging
 import numpy as np
 
 import sed
+
+
 
 logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
 
@@ -531,15 +532,16 @@ class Star:
                          marker='o',linestyle='--',lw=2):
 
         """
+        Plot photospheric data.
 
         Parameters
         ----------
-        ax
-        pointsize
-        color
-        marker
-        linestyle
-        lw
+        ax : axis object
+        pointsize : marker size
+        color : marker color
+        marker: marker type
+        linestyle: linesytle
+        lw: linewidth
 
         """
         xlam, yflux = self.StarPhotosphere
@@ -592,5 +594,3 @@ class Star:
 
             ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr,fmt=pfmt,
                         capsize=capsize,ms=pointsize)
-
-
