@@ -7,7 +7,7 @@ N1 = vega zero point flux in erg/s/cm^2/Angstrom
 N2 = uncertainty in vega zero point flux in erg/s/cm^2/Angstrom
 N3 = Isophotal frequency (Hz)
 N4 = vega zero point flux in erg/s/cm^2/Hz
-N5 = uncertainty in vega cero point flux in erg/s/cm^2/Hz
+N5 = uncertainty in vega zero point flux in erg/s/cm^2/Hz
 
 
 AB mag conversion:
@@ -69,3 +69,8 @@ HERSCHEL:
 from SVO profile service
 pivot wavelength used
 angstroms
+
+AKARI:
+from SVO profile service
+wavelength in angstrom
+Using lam_eff for wavelength
