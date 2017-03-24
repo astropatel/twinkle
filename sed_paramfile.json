@@ -28,15 +28,15 @@
     },
 
   "longwave_Bool": false,
-  "W3Adapt" : true,
-  "W2Adapt" : true,
+  "W3Adapt" : false,
+  "W2Adapt" : false,
   "fitphot" : true,
   "scalephot": true,
 
   "files":
     {
-      "stinfo_file": "NewWtdExcess_ExcessStars_07272014.txt",
-      "stinfo_topdir": "ExcessStars_07272014_mag2resSNR_fittedCDF_33trim",
+      "stinfo_file": "sample_stardata.txt",
+      "stinfo_topdir": "Research",
       "stcolor_dir": "Stellar_colors",
       "input_stars" : "select_stars.txt",
       "bv_colorfile": "EMamajek_MSColors.txt",
@@ -68,7 +68,7 @@
     {
       "mags2use0_original" : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2","W3","W4"],
       "mags4Phot0_original"  : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2"],
-      "mags4scale0_original"  : ["BJ","VJ","J2M","H2M","Ks2M","W1"],
+      "mags4scale0_original"  : ["BJ","VJ","J2M","H2M","Ks2M"],
       "mags4Dust0"  : ["W3","W4"],
       "mag4DustWFC" : ["W3","W4","MIPS24"],
       "scaleSEDbands"  : ["W1","W2"],

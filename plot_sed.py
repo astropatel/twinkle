@@ -9,11 +9,11 @@ import matplotlib.ticker as mtick, math as ma
 from scipy.optimize import bisect
 import mosaic_tools as mt
 from readcol import *
-#import wise_flux_correction
 from matplotlib.ticker import MaxNLocator, MultipleLocator
 import load_wfcorrection as lwf
 from mpl_toolkits.axes_grid1 import Grid
 import sed_paramfile as sp
+
 
 try:
     from astropy import constants as con
@@ -26,25 +26,7 @@ __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>'
 #     Definition to obtain Tbb assuming flux correction
 #  =========================================================
 
-def calc_temp(y, yerr, x, temparr, kw_cor):
-    fluxNormed = []
-    kcorList = []
 
-    #  x should be list of strings with band info
-    for bd in x:
-        fluxNormed.append(np.array(kw_cor['F_cor_%s' % bd]))
-        kcorList.append(np.array(kw_cor['kcor_%s' % bd]))
-
-    kcorList = np.array(kcorList).transpose()
-    Predicted = np.array(fluxNormed)
-    a, b = Predicted[0], Predicted[1]
-    x0, y0 = y[0], y[1]
-    sigx, sigy = yerr[0], yerr[1]
-    alpha = ((a * x0 / sigx ** 2) + (b * y0 / sigy ** 2)) / ((a / sigx) ** 2 + (b / sigy) ** 2)
-
-    FluxNormed = (alpha * (Predicted.transpose() * kcorList).transpose()).transpose()
-    res = np.subtract(FluxNormed, y)
-    return res, FluxNormed, alpha
 
 
 def find_RJPoints(wavedict, photkeys):
@@ -84,8 +66,8 @@ def plot_blackbody(ax, wave, ExcessFlux, dust_lambda, lightW4_line, a2m, ptsz, l
     ax.plot(dust_lambda * a2m, lightW4_line * dust_lambda, 'm-.', linewidth=lw)
     for key, val in ExcessFlux.iteritems():
         if Exbool_Dict[key]:
-            ax.errorbar(wave[key] * a2m, val * wave[key], \
-                        yerr=0.7 * val * wave[key], uplims=True, ecolor='red', \
+            ax.errorbar(wave[key] * a2m, val * wave[key],
+                        yerr=0.7 * val * wave[key], uplims=True, ecolor='red',
                         capsize=5, elinewidth=5, capthick=2)
         else:
             ax.errorbar(wave[key] * a2m, val * wave[key], yerr=ExcessFluxerr[key] * wave[key], \
@@ -735,7 +717,7 @@ for i, useind in enumerate(f_ind):
 
         flxArrErr = np.array([ExcessFluxerr[bandlow], ExcessFluxerr[bandhi]])
 
-        res, FluxNormed, alpha = calc_temp(flxArr, flxArrErr, SOBJ.mags4Dust,
+        res, FluxNormed, alpha = STools.calc_temp(flxArr, flxArrErr, SOBJ.mags4Dust,
                                            lwf.wfc.tempArr, lwf.wfc.kw_cor)
         chi2Dust = np.sum((res / flxArrErr) ** 2, axis=1)
         tempnew_dust = lwf.wfc.tempArr[np.where(chi2Dust.min() == chi2Dust)[0][0]]  # FIND NEW TEMPERATURES

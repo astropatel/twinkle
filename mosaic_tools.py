@@ -163,6 +163,16 @@ class ImageTools:
 
         return self.img
 
+    def load_NFits(self, file_list):
+        """Load all data in file list to cube"""
+        datCube = []
+        for fle in file_list:
+            img = self.load_image(fle)
+            datCube.append(img)
+
+
+        return np.array(datCube)
+
     def get_centroid(self, img, fwhm_gauss_kern, center, xb, yb, maxiter=5, conv=0.01):
         from scipy import ndimage
         from skimage.measure import moments, moments_central

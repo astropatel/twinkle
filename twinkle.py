@@ -10,7 +10,6 @@ Issues and changes that need to be made:
 """
 
 import os
-import sys
 import copy
 import json
 import logging
@@ -287,7 +286,7 @@ class Star:
             mags4Phot0 = self.W2Adopt(specs, mags4Phot0, True)
 
         # Remove optical bands cause of late spectral type?
-        if self.starsdat['NoOptical'][self.sid] == 'Yes':
+        if self.starsdat['NoOptical'][self.sid] :
             for arr in Photometry_spCheckList:
                 arr = np.array(arr)
                 for mv in specs['phot']['Remove_RedStars']:
@@ -529,29 +528,30 @@ class Star:
 
 
     def plot_photosphere(self,ax,pointsize=4,lcolor='orange',pcolor='orange',
-                         marker='o',linestyle='--',lw=2):
+                         marker='o',linestyle='--',lw=2,**kwargs):
 
         """
         Plot photospheric data.
 
         Parameters
         ----------
-        ax : axis object
-        pointsize : marker size
-        color : marker color
-        marker: marker type
-        linestyle: linesytle
-        lw: linewidth
+        ax : axis object (e.g. ax = plt.figure().add_subplot(111))
+        pointsize (float) : marker size
+        color (string) : marker color
+        marker (string) : marker type
+        linestyle (string) : linesytle
+        lw (float): linewidth
+        kwargs: matplotlib kw
 
         """
         xlam, yflux = self.StarPhotosphere
 
         # PLOT PHOTOSPHERE CONTINUUM
-        ax.plot(xlam * _ANG2MICRON, yflux * xlam, color=lcolor, ls=linestyle, lw=lw)
+        ax.plot(xlam * _ANG2MICRON, yflux * xlam, color=lcolor, ls=linestyle, lw=lw,**kwargs)
 
         for band in self.mags2use:
             ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
-                    marker=marker,mfc=pcolor,ms=pointsize)
+                    marker=marker,mfc=pcolor,mec=pcolor,ms=pointsize)
 
 
 
@@ -559,18 +559,19 @@ class Star:
                           markerp='o',markernp='*',capsize=0,linestyle='-',lw=1):
 
         """
-        
+        Plot empirical SED data.
+
         Parameters
         ----------
-        ax
-        pointsize
-        lcolor
-        pcolor
-        markerp
-        markernp
+        ax : axis object (e.g. ax = plt.figure().add_subplot(111))
+        pointsize (float): marker size
+        lcolor (string) : line color
+        pcolor (string) : point color
+        markerp (string) : marker type
+        markernp (string) :
         capsize
-        linestyle
-        lw
+        linestyle (string): linestyle
+        lw (float): linewidth
 
         Returns
         -------

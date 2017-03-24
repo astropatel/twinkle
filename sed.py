@@ -49,10 +49,10 @@ AT = mt.ArrayTools()
 FT = mt.FittingTools()
 
 # SET UP CONSTANTS
-_CS = con.c.to('cm/s')
-_WIEN = con.b_wien.to('K cm')
-_H = con.h.to('erg s')
-_KB = con.k_B.to('erg/K')
+_CS = con.c.to('cm/s').value
+_WIEN = con.b_wien.to('K cm').value
+_H = con.h.to('erg s').value
+_KB = con.k_B.to('erg/K').value
 
 # SET UP UNIT CONVERSION.
 _CM2ANG = 100000000.0
@@ -168,8 +168,6 @@ class SEDTools:
             self.pband = aspband(opj(fRSR, RSRFile), inputUnits=u)
         elif flat:
             self.pband = Flatbandpass(waverange, cntr)
-
-
 
     def cgs2Jy(self, wave=None, nu=None, flux=None):
         """To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
@@ -803,7 +801,7 @@ class SEDTools:
                     raise ValueError('Sample size too small. Need more on red end %s band.' % band)
                 else:
                     pass
-                flux = np.array(self.rsr_flux(pband, x * _CM2ANG, fluxbb, bulk))
+                flux = np.array(self.rsr_flux(pband, x * _CM2ANG, fluxbb))
                 flux_arr = np.append(flux_arr, flux / pband.pivotWavelength())
         else:
             flux_arr = fluxbb / (x * _CM2ANG)
@@ -1199,10 +1197,10 @@ class DataLogistics:
 
 
             if changekeys:
-                if np.any(colnames == 'W1mC'):
+                if 'W1mC' in colnames: #np.any(colnames == 'W1mC'):
                     StarsDat['W1m'] = StarsDat.pop('W1mC')
                     StarsDat['W1me'] = StarsDat.pop('W1meC')
-                if np.any(colnames == 'W2mC'):
+                if 'W1mC' in colnames: #np.any(colnames == 'W2mC'):
                     StarsDat['W2m'] = StarsDat.pop('W2mC')
                     StarsDat['W2me'] = StarsDat.pop('W2meC')
 
