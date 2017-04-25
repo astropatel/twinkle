@@ -298,36 +298,52 @@ class Star:
         # ========================================
         # KEEP ONLY VALID PHOTOMETRIC MEASUREMENTS.
         for mv in mags2use0:
-            tmp = mv
 
-            if self.starsdat['%sm' % mv][self.sid] == 'null':
+            if self.starsdat['{}m'.format(mv)][self.sid] == 'null':
                 try:
                     mags2use0.remove(mv)
-                    logging.info('%s band removed from mags2use0'%mv)
+                    logging.info('{} band removed from mags2use0'.format(mv))
                 except ValueError:
-                    loggging.error('Error in removing %s from mags2use' % mv)
+                    loggging.error('Error in removing {} from mags2use'.format(mv))
                 try:
                     mags4Phot0.remove(mv)
-                    logging.info('%s band removed from mags4Phot0'%mv)
+                    logging.info('{} band removed from mags4Phot0'.format(mv))
                 except ValueError:
-                    loggging.error('Error in removing %s from mags4phot' % mv)
+                    loggging.error('Error in removing {} from mags4phot'.format(mv))
                 try:
                     mags4scale0.remove(mv)
-                    logging.info('%s band removed from mags4scale0'%mv)
+                    logging.info('{} band removed from mags4scale0'.format(mv))
                 except ValueError:
-                    loggging.error('Error in removing %s from mags4scale' % mv)
+                    loggging.error('Error in removing {} from mags4scale'.format(mv))
                 try:
                     mags4Dust0.remove(mv)
-                    logging.info('%s band removed from mags4Dust0' % mv)
+                    logging.info('{} band removed from mags4Dust0'.format(mv))
                 except ValueError:
-                    loggging.error('Error in removing %s from mags4dust' % mv)
+                    loggging.error('Error in removing {} from mags4dust'.format(mv))
 
             else:
-                vegaMagDict_temp[tmp] = float(self.starsdat['%sm' % mv][self.sid])
-                if self.starsdat['%sme' % mv][self.sid] == 'null':
-                    vegaMagErrDict_temp[tmp] = 0.05 * (vegaMagDict_temp[tmp])
+                # CHECK IF IT IS MAG OR FLUX
+                if '_flux' in mv:
+                    freq = eval('stoo.{}pband.isoFrequency()'.format(mv))
+                    fj = float(self.starsdat['%s_flux'%mv][self.sid])
+                    # WHEN THERE IS A NULL VALUE
+                    try:
+                        efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
+                    except ValueError:
+                        efj = 0.05 * fj
+                    fcgs, efcgs= np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
+                                 / eval('STools.%spband.isoWavelength()' % mv)
+
+                    vegaMagDict_temp[mv] = fcgs
+                    vegaMagErrDict_temp[mv] = efcgs
+
+                # Assumes the rest is a magnitude
                 else:
-                    vegaMagErrDict_temp[tmp] = float(self.starsdat['%sme' % mv][self.sid])
+                    vegaMagDict_temp[mv] = float(self.starsdat['{}m'.format(mv)][self.sid])
+                    if self.starsdat['%sme' % mv][self.sid] == 'null':
+                        vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
+                    else:
+                        vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
 
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
