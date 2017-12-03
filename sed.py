@@ -19,13 +19,12 @@
   8. Calc_temp needs better docstring
 """
 
-import os, re
-import operator
+import os, re, operator
 import glob, string
-import directories
 import numpy as np
 
-import mosaic_tools as mt
+from utils import directories
+from utils import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
 
@@ -43,7 +42,7 @@ __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
 DIR = directories
 opj = os.path.join
-intpdir = DIR.Interpolation_Files()
+intpdir = DIR.SupportFiles()
 fRSR = DIR.RSR()
 AT = mt.ArrayTools()
 FT = mt.FittingTools()
@@ -1227,11 +1226,13 @@ class DataLogistics:
         # self.J_lim = -1000
         # self.H_lim, self.Ks_lim = -1000, -1000
         # self.B_lim, self.V_lim = -1000, -1000
+        import pdb
+        pdb.set_trace()
         workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
         
         starfile = opj(workingdir, specs['files']['stinfo_file'])
 
-        empfile = opj(intpdir,specs['files']['stcolor_dir'],
+        empfile = opj(workingdir,specs['files']['stcolor_dir'],
                                specs['files']['bv_colorfile'])
         self.loadAllStars(starfile, specs['changekeys'])
         self.loadAllModels()
@@ -1356,7 +1357,7 @@ class GridModels:
          """
         # CHECK FORMAT OF GRAV AND METALLICITY
 
-        gdir = opj(intpdir, model)
+        gdir = opj(intpdir,'Models', model)
 
         if grav is None:  # COLLECT ALL FILES OF ANY GRAV -- MEANT TO BE USED TO KEEP GRAV AS FREE PARAMETERS
             filesGrid = glob.glob(opj(gdir, 'lteNextGen*_%.1f%s' % (met, ext)))
@@ -1469,7 +1470,7 @@ class GridModels:
             met = 'p0' + met
 
         # CHANGE DIRECTORY TO NEEDED METALLICITY FILE
-        dir = opj(intpdir, model, 'k' + met)
+        dir = opj(intpdir,'Models', model, 'k' + met)
         # THIS SELECTS OUT ONLY THE FILES THAT MEET THE METALLICITY
         # CRITERIA
         filesGrid = glob.glob(opj(dir, 'k' + met + '*.fits'))

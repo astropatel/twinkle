@@ -1,0 +1,1 @@
+/Users/rpatel/Dropbox (Personal)/Research/Interpolation_Files/Stellar_colors/EMamajek_MSColors.txt

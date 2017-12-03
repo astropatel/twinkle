@@ -23,7 +23,7 @@
       "scaleSEDbands"  : "Array of strings of photometryused to scale final SED.",
       "Remove_RedStars"  : "Array of strings of bands to remove for latest type stars.",
       "Exfunc" : "blackbody of modified blackbody.",
-      "modifiedBB_lam0" : "Central wavelnegth band for modified blackbody calculation."
+      "modifiedBB_lam0" : "Central wavelength band for modified blackbody calculation."
 
     },
 
@@ -33,12 +33,13 @@
   "fitphot" : true,
   "scalephot": true,
   "changekeys": true,
+  "satcheck":true,
 
   "files":
     {
       "stinfo_file": "sample_stardata.txt",
-      "stinfo_topdir": "Research",
-      "stcolor_dir": "Stellar_colors",
+      "stinfo_topdir": "twinkle",
+      "stcolor_dir": "SupportFiles",
       "input_stars" : "select_stars.txt",
       "bv_colorfile": "EMamajek_MSColors.txt",
       "write2file" : false,

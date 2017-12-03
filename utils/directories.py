@@ -7,8 +7,8 @@ def getDir(dir):
         if dir in dirs:
             return os.path.join(root, dir)
 
-def Interpolation_Files():
-    return getDir('Interpolation_Files')
+def SupportFiles():
+    return getDir('SupportFiles')
 
 def NextGen():
     return getDir('NextGen')
