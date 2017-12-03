@@ -32,6 +32,7 @@
   "W2Adapt" : false,
   "fitphot" : true,
   "scalephot": true,
+  "changekeys": true,
 
   "files":
     {

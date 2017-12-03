@@ -195,6 +195,9 @@ class Star:
         if specs['fitphot']:
             self.fitPhotosphere(self.su2ea, self.T0,
                                 self.modeli, self.g, self.met)
+            params, perror = self.mfit.params, self.mfit.perror
+            self.p_up, self.p_down = params + perror, params - perror
+
 
             logging.info('Photosphere for %s fit with T=%s K'
                          %(self.starname, self.StarTemp))
@@ -207,7 +210,26 @@ class Star:
                                                       self.su2ea, modelinfo,
                                                       wave=(wave_min, wave_max),
                                                       gridpts=gridpts)
+
+            StarPhot1 = STools.photosphere(self.p_up,
+                                           self.su2ea, modelinfo,
+                                           wave=(wave_min, wave_max),
+                                           gridpts=gridpts)
+            StarPhot2= STools.photosphere(self.p_down,
+                                          self.su2ea, modelinfo,
+                                          wave=(wave_min, wave_max),
+                                          gridpts=gridpts)
+
+            flxes = np.array([StarPhot1[1],StarPhot2[1]])
+            maxind = np.argmax(np.sum(flxes, axis=1))
+            minind = np.argmin(np.sum(flxes, axis=1))
+
+            self.StarPhotosphere_up = (StarPhot1[0],flxes[maxind])
+            self.StarPhotosphere_down = (StarPhot1[0],flxes[minind])
+
+
             self.StarPhotosphere_unsc = self.StarPhotosphere
+
             for band in self.mags2use:
                 flxt = STools.rsr_flux(getattr(STools, '{}pband'.format(band)),
                                        *self.StarPhotosphere)[0]
@@ -226,7 +248,8 @@ class Star:
 
 
     def writeSED(self, filename='sed.txt',
-                 comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom\n'):
+                 comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom,\
+                          Teff={:.1f}K,rad={:.3f}Rsol.\n'):
         """
         Function to write out fitted SED to file.
 
@@ -237,11 +260,12 @@ class Star:
                  on first line of the saved SED file.
 
         """
+        comment = comment.format(self.StarTemp, self.StarRadius)
+
         if not self.StarPhotosphere:
             raise ValueError('Photosphere was not created --> cant be written out.')
-        filename = self.starname + filename
+
         with open(filename,'w') as file:
-            file.write()
             file.write('%s' % comment)
             file.write('lambda\t f_lambda\n')
             np.savetxt(file, np.transpose(self.StarPhotosphere), delimiter='\t')
@@ -287,11 +311,12 @@ class Star:
 
         # Remove optical bands cause of late spectral type?
         if self.starsdat['NoOptical'][self.sid] :
-            for arr in Photometry_spCheckList:
-                arr = np.array(arr)
+
+            for arr in Photometry_spCheckList :
+                # arr = np.array(arr)
                 for mv in specs['phot']['Remove_RedStars']:
                     try:
-                        ind = np.where(eval(arr) == mv)[0]
+                        ind = np.where(np.array(eval(arr)) == mv)[0]
                         exec ('%s = np.delete(%s,ind)' % (arr, arr))
                     except ValueError:
                         pass
@@ -347,10 +372,17 @@ class Star:
 
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
-        self.mags2use = self.keep_unsatmags(vegaMagDict_temp, mags2use0)
-        self.mags4Dust = self.keep_unsatmags(vegaMagDict_temp, mags4Dust0)
-        self.mags4Phot = self.keep_unsatmags(vegaMagDict_temp, mags4Phot0)
-        self.mags4scale = self.keep_unsatmags(vegaMagDict_temp, mags4scale0)
+        if specs['satcheck']:
+            self.mags2use = self.keep_unsatmags(vegaMagDict_temp, mags2use0)
+            self.mags4Dust = self.keep_unsatmags(vegaMagDict_temp, mags4Dust0)
+            self.mags4Phot = self.keep_unsatmags(vegaMagDict_temp, mags4Phot0)
+            self.mags4scale = self.keep_unsatmags(vegaMagDict_temp, mags4scale0)
+        else:
+            self.mags2use   = mags2use0
+            self.mags4Dust  = mags4Dust0
+            self.mags4Phot  = mags4Phot0
+            self.mags4scale = mags4scale0
+
 
         # REMOVE NON-USED MAGNITUDES FROM DICTIONARY
         #  ========================================
@@ -378,6 +410,9 @@ class Star:
         """
 
         magsCheck1 = magsCheck
+        if not isinstance(magsCheck1,list):
+            magsCheck1 = list(magsCheck1)
+
         mags_temp = np.array(magsCheck).copy()
         for mv in mags_temp:
             try:
@@ -489,7 +524,8 @@ class Star:
 
         if simple:
             if self.starsdat['W2m'][self.sid] > 3.8:
-                plist = np.append(plist, 'W2')
+                plist = np.unique(np.append(plist, 'W2'))
+
 
         else:
             W12_cut = specs['WISE_excess']['W12_cut']
@@ -529,7 +565,6 @@ class Star:
             raise ValueError('mags4scale is empty.')
         if np.array(self.mags4Phot).size == 0:
             raise ValueError('mags4Phot is empty.')
-
         mfitlist = {'photmags': np.array(self.mags4Phot),
                     'scalemags': np.array(self.mags4scale)}
 
@@ -542,6 +577,25 @@ class Star:
         self.StarRadius, self.StarTemp = fit_dat[0], fit_dat[1]
         self.mfit = fit_dat[2]
 
+    def plot_photrange(self,ax,color='orange',**kwargs):
+        """
+        Plot photosphere limits based on uncertainties in fit parameters
+        Parameters
+
+        Parameters
+        ----------
+        ax
+        color
+        kwargs
+
+        Returns
+        -------
+
+        """
+        xlam = self.StarPhotosphere_down[0]
+        ax.fill_between(xlam * _ANG2MICRON,
+                        self.StarPhotosphere_down[1]*xlam,
+                        self.StarPhotosphere_up[1] *xlam,color=color,alpha=0.4)
 
     def plot_photosphere(self,ax,pointsize=4,lcolor='orange',pcolor='orange',
                          marker='o',linestyle='--',lw=2,**kwargs):
@@ -567,7 +621,7 @@ class Star:
 
         for band in self.mags2use:
             ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
-                    marker=marker,mfc=pcolor,mec=pcolor,ms=pointsize)
+                    marker=marker,mfc=pcolor,mec=pcolor,ms=pointsize,zorder=10)
 
 
 
@@ -610,4 +664,4 @@ class Star:
                 pfmt= '%s%s'%(pcolor,markernp)
 
             ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr,fmt=pfmt,
-                        capsize=capsize,ms=pointsize)
+                        capsize=capsize,ms=pointsize,zorder=10)

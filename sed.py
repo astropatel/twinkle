@@ -105,7 +105,7 @@ class SEDTools:
 
         units = {'WISE': 'microns', '2MASS': 'microns', 'Johnson': 'angstroms',
                  'MIPS': 'microns', 'Tycho': 'angstroms', 'IRAS': 'angstroms',
-                 'HPACS': 'angstroms', 'Akari':'angstroms'}
+                 'HPACS': 'angstroms', 'Akari':'angstroms','LNIRC2':'microns'}
 
         aspband = Bandpass
         if RSRFile is None and not flat:
@@ -164,12 +164,17 @@ class SEDTools:
             u = units['Akari']
             self.Akari90pband = aspband(opj(fRSR,'90_Akari.dat'), inputUnits=u)
 
+            u = units['LNIRC2']
+            self.LpNIRC2pband = aspband(opj(fRSR,'Lp_NIRC2.dat'),inputUnits=u)
+            self.HNIRC2pband = aspband(opj(fRSR, 'H_NIRC2.dat'), inputUnits=u)
+            self.KpNIRC2pband = aspband(opj(fRSR, 'Kp_NIRC2.dat'), inputUnits=u)
+
         elif RSRFile is not None and not flat:
             self.pband = aspband(opj(fRSR, RSRFile), inputUnits=u)
         elif flat:
             self.pband = Flatbandpass(waverange, cntr)
 
-    def cgs2Jy(self, wave=None, nu=None, flux=None):
+    def cgs2Jy(self, flux,dflux,band=None,wave=None,nu=None):
         """To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
         input wavelength is in Angstroms
 
@@ -183,17 +188,39 @@ class SEDTools:
         --------
         flux density in Jansky(ies).
         """
+        _CS = con.c.to('angstrom/s').value
+
+        if wave is None:
+            wave = band.isoWavelength()
+
+
         Flux = flux * wave
 
         if nu is None:
-            nu = (_CS / wave)  # ERROR IS INCURRED BY CHOICE OF SPEED OF LIGHT -- USE CAREFULLY
+            try:
+                nu = band.isoFrequency()
+
+            except UnboundLocalError:
+
+                nu = _CS / wave # ERROR IS INCURRED BY CHOICE OF SPEED OF LIGHT -- USE CAREFULLY
             #  IF POSSIBLE TRY TO USE GIVEN FREQUENCIES
-        else:
-            pass
+        else: nu = _CS / wave
+
 
         # y = flux*(wave**2/(_CS))*1e23
         y = (Flux / nu) * 1e23
-        return y
+        # DOES NOT INCLUDE UNCERTAINITY IN FREQUENCY OR WAVELENGTH
+        dy = (1e23 / nu) * dflux * wave # + (flux * dwave)**2)
+
+        return y, dy
+
+    def mag2Jy(self, band,mag,magerr):
+
+        fcgs,dfcgs = self.mag2fluxZPLam(eval('self.{}pband'.format(band)),mag,magerr)
+
+        fjy, efjy = self.cgs2Jy(fcgs,dfcgs,eval('self.{}pband'.format(band)))
+
+        return fjy,efjy
 
     def Jy2cgs(self, nuFnu, DnuFnu=None):
         """ To convert specific flux in Jansky to erg/s/cm2.
@@ -411,7 +438,7 @@ class SEDTools:
 
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         mag_lam = -2.5 * np.log10(flux / Fiso)
-        mag_lam_err = (1. / Fiso) * (-2.5 / np.log(10)) * fluxErr / 10 ** (mag_lam / -2.5)
+        mag_lam_err = (1. / Fiso) * (2.5 / np.log(10)) * fluxErr / 10 ** (mag_lam / -2.5)
         return mag_lam, mag_lam_err
 
     def mag2fluxZPLam(self, band, Vmag, VmagErr, sysErr=False):
@@ -475,7 +502,7 @@ class SEDTools:
         else:
             df_l2 = 0
 
-        dFlux_nu = 10 ** (Vmag / -2.5) * sqrt(df_l1 ** 2 + df_l2 ** 2)
+        dFlux_nu = 10 ** (Vmag / -2.5) * np.sqrt(df_l1 ** 2 + df_l2 ** 2)
 
         return Flux_nu, dFlux_nu
 
@@ -503,6 +530,45 @@ class SEDTools:
             fluxDict[temp], fluxDict_err[temp] = fluxList[0], fluxList[1]
 
         return (fluxDict, fluxDict_err)
+
+    def rsr_eflux(self, pband, lambda_,flux,flux_up, flux_down,
+                  report_type='avg'):
+        """
+        Calculates the integrated flux filtered through a particluar
+        passband, as well as the upper and lower limits of the flux
+        to give a 1 sigma uncertainty based on the fit parameters
+        uncertainties
+
+        Parameters
+        ----------
+        pband : passband object for a given photometric band created
+              from Bandpass class
+        lambda_ :(Array) Wavelength in Angstroms range of flux to
+                be calculated. Range should be atleast the extent of pband
+        flux: (Array) Flux of main fit
+        flux_up : (Array) Flux of upper limit of fit.
+        flux_down : (Array) Flux of lower limit of fit.
+        report_type : (str) either 'avg' to report average of uncertainties or
+                            'both'
+        Returns
+        -------
+        flux at the particular band and uncertainties. If 'avg', returns 2 element array
+        (flux, eflux). If 'both', returns 3 element array (flux, eflux_low, eflux_high)
+
+        """
+
+        flux = self.rsr_flux(pband,lambda_,flux)[0]
+        flux_low = self.rsr_flux(pband,lambda_,flux_down)[0]
+        flux_up = self.rsr_flux(pband,lambda_,flux_up)[0]
+
+        fl, fu = flux - flux_low, flux_up - flux
+        if report_type == 'avg':
+            return flux,np.average([fl,fu])
+
+        elif report_type == 'both':
+            return flux, fl, fu
+        else:
+            raise Exception('No report_type specified. If you only want integrated flux, use rsr_flux')
 
     def rsr_flux(self, pband, lambda_, flux):
         """Calculates integreated flux filtered through a passband object
@@ -1153,7 +1219,7 @@ class DataLogistics:
     - loading data
     """
 
-    def __init__(self, specs=None, changekeys=True):
+    def __init__(self, specs=None):
 
         # self.W1_lim, self.W2_lim = 4.5, 2.8
         # self.W3_lim, self.W4_lim = 3.5, -0.4
@@ -1167,13 +1233,13 @@ class DataLogistics:
 
         empfile = opj(intpdir,specs['files']['stcolor_dir'],
                                specs['files']['bv_colorfile'])
-        self.loadAllStars(starfile, changekeys)
+        self.loadAllStars(starfile, specs['changekeys'])
         self.loadAllModels()
         self.loadEmpiricalData(empfile)
 
 
 
-    def loadAllStars(self, starfile, changekeys=True):
+    def loadAllStars(self, starfile, changekeys):
 
 
         """Loads all data into a dictionary from starfile.
@@ -1220,7 +1286,7 @@ class DataLogistics:
 
         """
 
-        if len(EmpDat) == 0:#is not None:
+        if len(EmpDat) == 0: #is not None:
             dfemp = ascii.read(filename,comment='#')
             EmpDat['dat'] = dfemp
             #dat = EmpDat['test']
