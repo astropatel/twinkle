@@ -1,0 +1,56 @@
+
+You can use these filters for the moment. Their corresponding response functions are in ./SupportFiles/RSR/.
+
+To specify their use, they need to be added as a string in the "phot" section of the sed_paramfile.json
+ 
+##########################################################################################################
+%%%%%%%%%%%%%%%                       Available Filters                       %%%%%%%%%%%%%%%%%%%%%%%%%%%
+##########################################################################################################
+
+
+    Band Identifiers         Description
+    ---------------          ---------------------------
+
+      W1                     WISE BAND 1 (3.4 um)
+      W2                     WISE BAND 2 (4.6 um)
+      W3                     WISE BAND 3 (~12 um)
+      W4                     WISE BAND 4 (~22 um)
+
+      MIPS24                 Spizter/MIPS 24 um 
+      MIPS70                 Spizter/MIPS 70 um 
+      MIPS160                Spizter/MIPS 160 um
+
+      J2M                    2MASS J
+      H2M                    2MASS H
+      Ks2M                   2MASS Ks
+
+      UB                     Bessel U
+      BB                     Bessel B
+      VB                     Bessel V
+      RB                     Bessel R
+      IB                     Bessel I
+
+      UJ                     Johnson U
+      BJ                     Johnson B
+      VJ                     Johnson V
+      RJ                     Johnson R
+      IJ                     Johnson I
+
+      VT                     Tycho V
+      BT                     Tycho B
+      Hp                     Hipparcos
+
+      IRAS60                 IRAS 60
+      IRAS100                IRAS 100
+      IRAS25                 IRAS 25
+      IRAS12                 IRAS 12
+
+      HPACS70                Herschel/PACS 70
+      HPACS100               Herschel/PACS 100
+      HPACS160               Herschel/PACS 160
+
+      Akari90                Akari 90 um
+      
+      HNIRC2                 Keck NIRC2 H
+      KpNIRC2                Keck NIRC2 Kp
+      LpNIRC2                Keck NIRC2 Lp
