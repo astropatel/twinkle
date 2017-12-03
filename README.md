@@ -4,7 +4,7 @@ The code is still under development for general use.
 
 1) Take a look at the Twinkle.ipynb Jupyter notebook to see how to get started.
 2) Use sed_paramfile.json to change input parameters
-3) Use sample_stardata.txt and sedDatFileDescription.xlsx to set up stellar data and look up definitions and examples of each column used.
+3) Use sample_stardata.txt and ./Docs/sedDatFileDescription.xlsx to set up stellar data and look up definitions and examples of each column used.
 4) twinkle.py is the main class called and "inherits" sed.py.
 
 5) sed.py hosts all logistical tools to help calculate the SED: Filter profile management, magnitude/flux conversion,  photosphere generation, etc.
