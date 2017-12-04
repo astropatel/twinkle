@@ -1,5 +1,5 @@
 # ignore spectra
-/SupportFiles/NextGen/Spectra/
+/SupportFiles/Models/NextGen/Spectra/
 
 # RSR FILES TO EXCLUDE
 *.xls
