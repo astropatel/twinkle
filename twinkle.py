@@ -10,6 +10,7 @@ Issues and changes that need to be made:
 """
 
 import os
+import sys
 import copy
 import json
 import logging
@@ -165,17 +166,27 @@ class Star:
         self.su2ea_dust = CONST_2 / self.disti ** 2
 
         #  Obtain grav and met from file or guess based on B-V
+        # import pdb
+        # pdb.set_trace()
+        self.g = self.starsdat['grav'][self.sid]
+        self.T0 = self.starsdat['temp'][self.sid] / 1000.
+        bv = self.emdat['B-V']
         try:
-            self.g = self.starsdat['grav'][self.sid]
-            self.T0 = self.starsdat['temp'][self.sid] / 1000.
+            bvi = self.vegaMagDict['BJ'] - self.vegaMagDict['VJ']
 
         except KeyError:
-            bv = self.emdat['B-V']
-            bvi = self.vegaMagDict['BJ'] - self.vegaMagDict['VJ']
-            indebv = np.searchsorted(bv, bvi)
+            bvi = self.bv_unusedDict['BJ'] - self.bv_unusedDict['VJ']
 
-            self.T0 = self.emdat['Tinit'][indebv] / 1000.
+        indebv = np.searchsorted(bv, bvi)
+        if self.g is None:
             self.g = self.emdat['log(g)_x10'][indebv]
+        if self.T0 is None:
+            self.T0 = self.emdat['Tinit'][indebv] / 1000.
+
+
+
+        #except KeyError:
+
 
         # ================================================================
         #                      Convert Photometry to Flux
@@ -312,11 +323,16 @@ class Star:
         # Remove optical bands cause of late spectral type?
         if self.starsdat['NoOptical'][self.sid] :
 
+            self.bv_unusedDict = {}
+
             for arr in Photometry_spCheckList :
                 # arr = np.array(arr)
                 for mv in specs['phot']['Remove_RedStars']:
                     try:
+                        # import pdb
+                        # pdb.set_trace()
                         ind = np.where(np.array(eval(arr)) == mv)[0]
+                        self.bv_unusedDict[mv] = self.starsdat[mv+'m'][self.sid]
                         exec ('%s = np.delete(%s,ind)' % (arr, arr))
                     except ValueError:
                         pass
@@ -324,7 +340,16 @@ class Star:
         # KEEP ONLY VALID PHOTOMETRIC MEASUREMENTS.
         for mv in mags2use0:
 
-            if self.starsdat['{}m'.format(mv)][self.sid] == 'null':
+            try:
+                temp_mf = self.starsdat['{}m'.format(mv)][self.sid]
+            except KeyError:
+#                try:
+                temp_mf = self.starsdat['{}'.format(mv)][self.sid]
+                # except KeyError:
+                #     sys.exit('I dont recognize that photometric band mag or flux. Check your input file.')
+
+            # CHECK IF IT'S NULL. REMOVE IF SO FROM ENTIRE LIST.
+            if temp_mf == 'null':
                 try:
                     mags2use0.remove(mv)
                     logging.info('{} band removed from mags2use0'.format(mv))
@@ -346,32 +371,86 @@ class Star:
                 except ValueError:
                     loggging.error('Error in removing {} from mags4dust'.format(mv))
 
+            #OTHERWISE ADD IT.
             else:
-                # CHECK IF IT IS MAG OR FLUX
                 if '_flux' in mv:
-                    freq = eval('stoo.{}pband.isoFrequency()'.format(mv))
-                    fj = float(self.starsdat['%s_flux'%mv][self.sid])
+                    mv = mv.strip('_flux')
+                    freq = eval('STools.{}pband.isoFrequency()'.format(mv))
+                    fj = temp_mf
                     # WHEN THERE IS A NULL VALUE
                     try:
                         efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
                     except ValueError:
                         efj = 0.05 * fj
-                    fcgs, efcgs= np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
-                                 / eval('STools.%spband.isoWavelength()' % mv)
+                    fcgs, efcgs = np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
+                                  / eval('STools.{}pband.isoWavelength()'.format(mv))
+                    fmag, efmag  = STools.fluxZPLam2mag(eval('STools.{}pband'.format(mv)),
+                                         fcgs,efcgs)
 
-                    vegaMagDict_temp[mv] = fcgs
-                    vegaMagErrDict_temp[mv] = efcgs
+                    vegaMagDict_temp[mv] = fmag
+                    vegaMagErrDict_temp[mv] = efmag
 
-                # Assumes the rest is a magnitude
+                    # Assumes the rest is a magnitude
                 else:
-                    vegaMagDict_temp[mv] = float(self.starsdat['{}m'.format(mv)][self.sid])
+                    vegaMagDict_temp[mv] = temp_mf
                     if self.starsdat['%sme' % mv][self.sid] == 'null':
                         vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
                     else:
                         vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
 
+            # if self.starsdat['{}m'.format(mv)][self.sid] == 'null':
+            #     try:
+            #         mags2use0.remove(mv)
+            #         logging.info('{} band removed from mags2use0'.format(mv))
+            #     except ValueError:
+            #         loggging.error('Error in removing {} from mags2use'.format(mv))
+            #     try:
+            #         mags4Phot0.remove(mv)
+            #         logging.info('{} band removed from mags4Phot0'.format(mv))
+            #     except ValueError:
+            #         loggging.error('Error in removing {} from mags4phot'.format(mv))
+            #     try:
+            #         mags4scale0.remove(mv)
+            #         logging.info('{} band removed from mags4scale0'.format(mv))
+            #     except ValueError:
+            #         loggging.error('Error in removing {} from mags4scale'.format(mv))
+            #     try:
+            #         mags4Dust0.remove(mv)
+            #         logging.info('{} band removed from mags4Dust0'.format(mv))
+            #     except ValueError:
+            #         loggging.error('Error in removing {} from mags4dust'.format(mv))
+            #
+            # else:
+            #     # CHECK IF IT IS MAG OR FLUX
+            #     if '_flux' in mv:
+            #         freq = eval('stoo.{}pband.isoFrequency()'.format(mv))
+            #         fj = float(self.starsdat['%s_flux'%mv][self.sid])
+            #         # WHEN THERE IS A NULL VALUE
+            #         try:
+            #             efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
+            #         except ValueError:
+            #             efj = 0.05 * fj
+            #         fcgs, efcgs= np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
+            #                      / eval('STools.%spband.isoWavelength()' % mv)
+            #
+            #         vegaMagDict_temp[mv] = fcgs
+            #         vegaMagErrDict_temp[mv] = efcgs
+            #
+            #     # Assumes the rest is a magnitude
+            #     else:
+            #         vegaMagDict_temp[mv] = float(self.starsdat['{}m'.format(mv)][self.sid])
+            #         if self.starsdat['%sme' % mv][self.sid] == 'null':
+            #             vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
+            #         else:
+            #             vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
+
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
+        mags2use0 = map(lambda s: s.replace('_flux',''),mags2use0)
+        mags4Dust0 = map(lambda s: s.replace('_flux', ''), mags4Dust0)
+        mags4Phot0 = map(lambda s: s.replace('_flux', ''), mags4Phot0)
+        mags4scale0 = map(lambda s: s.replace('_flux', ''), mags4scale0)
+
         if specs['satcheck']:
             self.mags2use = self.keep_unsatmags(vegaMagDict_temp, mags2use0)
             self.mags4Dust = self.keep_unsatmags(vegaMagDict_temp, mags4Dust0)
@@ -387,7 +466,7 @@ class Star:
         # REMOVE NON-USED MAGNITUDES FROM DICTIONARY
         #  ========================================
         for mv in mags2use0:
-            tmp = mv
+            tmp = mv.strip('_flux') # just in case _flux is used.
             self.vegaMagDict[tmp] = vegaMagDict_temp[tmp]
             self.vegaMagErrDict[tmp] = vegaMagErrDict_temp[tmp]
 

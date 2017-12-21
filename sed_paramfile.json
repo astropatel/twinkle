@@ -68,7 +68,7 @@
 
    "phot":
     {
-      "mags2use0_original" : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2","W3","W4"],
+      "mags2use0_original" : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2","W3","W4","HPACS160_flux"],
       "mags4Phot0_original"  : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2"],
       "mags4scale0_original"  : ["BJ","VJ","J2M","H2M","Ks2M"],
       "mags4Dust0"  : ["W3","W4"],

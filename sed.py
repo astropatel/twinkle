@@ -1226,8 +1226,8 @@ class DataLogistics:
         # self.J_lim = -1000
         # self.H_lim, self.Ks_lim = -1000, -1000
         # self.B_lim, self.V_lim = -1000, -1000
-        import pdb
-        pdb.set_trace()
+
+        #pdb.set_trace()
         workingdir = directories.WorkingDir(specs['files']['stinfo_topdir'])
         
         starfile = opj(workingdir, specs['files']['stinfo_file'])
@@ -1236,6 +1236,7 @@ class DataLogistics:
                                specs['files']['bv_colorfile'])
         self.loadAllStars(starfile, specs['changekeys'])
         self.loadAllModels()
+        #pdb.set_trace()
         self.loadEmpiricalData(empfile)
 
 
@@ -1305,7 +1306,6 @@ class DataLogistics:
         allg = np.unique(StarsDat['grav'])
         allmet = np.unique(StarsDat['met'])
         allmod = np.unique(StarsDat['model'])
-
         print '-------------------------------'
         print '      Loading All Gridmodels   '
 
