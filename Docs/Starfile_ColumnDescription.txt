@@ -32,10 +32,16 @@ The band options are listed below in the "available_filters.txt" file
     [band]e                    (float)           [band] mag unc.
     [band]_flux                (float)           flux for [band] (Jy)
     [band]_fluxe               (float)           flux unc. for [band] (Jy)
+    BJm                        (float)           Johnson B mag
+    BJme                       (float)           Johnson B mag unc.
+    VJm                        (float)           Johnson V mag
+    VJme                       (float)           Johnson V mag unc.    
 
     =================================================================
     %%%%%%%%%%%%%%%        Optional:      %%%%%%%%%%%%%%%%%%%%%%%%%%%
     =================================================================
+
+    Except for the ***'d columns, 
 
     Column headers            Data Type          Description.
     ---------------           ----------        ------------------------------
@@ -53,14 +59,10 @@ The band options are listed below in the "available_filters.txt" file
     W1meC ***                  (float)           WISE band 1 mag saturated corrected mag unc.
     BT-VT                      (float)           tycho color
     e_BT-VT                    (float)           tycho color uncertainty
-    B-V**                      (float)           color
-    e_B-V**                    (float)           color uncertainty
-    BJm**                      (float)           Johnson B mag
-    BJme**                     (float)           Johnson B mag unc.
-    VJm**                      (float)           Johnson V mag
-    VJme**                     (float)           Johnson V mag unc.    
     
     
     
  ===============================================================================================================    
 
+
+For the moment, one must include the Johnson B and V photometry and uncertainties (BJm, BJme, VJm, VJme)

@@ -104,7 +104,8 @@ class SEDTools:
 
         units = {'WISE': 'microns', '2MASS': 'microns', 'Johnson': 'angstroms',
                  'MIPS': 'microns', 'Tycho': 'angstroms', 'IRAS': 'angstroms',
-                 'HPACS': 'angstroms', 'Akari':'angstroms','LNIRC2':'microns'}
+                 'HPACS': 'angstroms', 'Akari':'angstroms','LNIRC2':'microns',
+                 'MSX':'angstroms','DENIS':'angstroms','GAIA':'angstroms'}
 
         aspband = Bandpass
         if RSRFile is None and not flat:
@@ -120,9 +121,9 @@ class SEDTools:
 
             #  MICRONS
             u = units['MIPS']
-            self.MIPS24pband = aspband(opj(fRSR, '24_MIPS.dat'), inputUnits=u)
-            self.MIPS70pband = aspband(opj(fRSR, '70_MIPS.dat'), inputUnits=u)
-            self.MIPS160pband = aspband(opj(fRSR, '160_MIPS.dat'), inputUnits=u)
+            self.MIPS24pband = aspband(opj(fRSR, 'MIPS24.dat'), inputUnits=u)
+            self.MIPS70pband = aspband(opj(fRSR, 'MIPS70.dat'), inputUnits=u)
+            self.MIPS160pband = aspband(opj(fRSR, 'MIPS160.dat'), inputUnits=u)
 
             #  MICRONS
             u = units['2MASS']
@@ -150,23 +151,52 @@ class SEDTools:
             self.Hppband = aspband(opj(fRSR, 'Hp.dat'), inputUnits=u)
 
             u = units['IRAS']
-            self.IRAS60pband = aspband(opj(fRSR, '60_IRAS.dat'), inputUnits=u)
-            self.IRAS100pband = aspband(opj(fRSR, '100_IRAS.dat'), inputUnits=u)
-            self.IRAS25pband = aspband(opj(fRSR,'25_IRAS.dat'), inputUnits=u)
-            self.IRAS12pband = aspband(opj(fRSR,'12_IRAS.dat'), inputUnits=u)
+            self.IRAS60pband  = aspband(opj(fRSR, 'IRAS60.dat'), inputUnits=u)
+            self.IRAS100pband = aspband(opj(fRSR, 'IRAS100.dat'), inputUnits=u)
+            self.IRAS25pband  = aspband(opj(fRSR, 'IRAS25.dat'), inputUnits=u)
+            self.IRAS12pband  = aspband(opj(fRSR, 'IRAS12.dat'), inputUnits=u)
 
             u = units['HPACS']
-            self.HPACS70pband = aspband(opj(fRSR, '70_HPACS.dat'), inputUnits=u)
-            self.HPACS100pband = aspband(opj(fRSR, '100_HPACS.dat'), inputUnits=u)
-            self.HPACS160pband = aspband(opj(fRSR, '160_HPACS.dat'), inputUnits=u)
+            self.HPACS70pband = aspband(opj(fRSR, 'HPACS70.dat'), inputUnits=u)
+            self.HPACS100pband = aspband(opj(fRSR, 'HPACS100.dat'), inputUnits=u)
+            self.HPACS160pband = aspband(opj(fRSR, 'HPACS160.dat'), inputUnits=u)
 
             u = units['Akari']
-            self.Akari90pband = aspband(opj(fRSR,'90_Akari.dat'), inputUnits=u)
+            self.Akari90pband = aspband(opj(fRSR,'Akari90.dat'), inputUnits=u)
+            self.Akari9pband = aspband(opj(fRSR,'Akari_IRCS9W.dat'), inputUnits=u)
+            self.Akari18pband = aspband(opj(fRSR, 'Akari_IRCL18W.dat'), inputUnits=u)
 
             u = units['LNIRC2']
             self.LpNIRC2pband = aspband(opj(fRSR,'Lp_NIRC2.dat'),inputUnits=u)
             self.HNIRC2pband = aspband(opj(fRSR, 'H_NIRC2.dat'), inputUnits=u)
             self.KpNIRC2pband = aspband(opj(fRSR, 'Kp_NIRC2.dat'), inputUnits=u)
+
+            u = units['MSX']
+            self.MSXApband = aspband(opj(fRSR,'MSXA.dat'),inputUnits=u)
+            self.MSXCpband = aspband(opj(fRSR,'MSXC.dat'),inputUnits=u)
+            self.MSXDpband = aspband(opj(fRSR,'MSXD.dat'),inputUnits=u)
+            self.MSXEpband = aspband(opj(fRSR,'MSXE.dat'),inputUnits=u)
+
+            u = units['DENIS']
+            self.IDENISpband = aspband(opj(fRSR,'DENISI.dat'),inputUnits=u)
+            self.JDENISpband = aspband(opj(fRSR,'DENISJ.dat'),inputUnits=u)
+            self.KsDENISpband = aspband(opj(fRSR,'DENISKs.dat'),inputUnits=u)
+
+            u = units['GAIA']
+            self.GGAIApband = aspband(opj(fRSR,'GAIAG.dat'),inputUnits=u)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         elif RSRFile is not None and not flat:
             self.pband = aspband(opj(fRSR, RSRFile), inputUnits=u)

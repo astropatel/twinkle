@@ -50,7 +50,20 @@ To specify their use, they need to be added as a string in the "phot" section of
       HPACS160               Herschel/PACS 160
 
       Akari90                Akari 90 um
+      Akari9                 Akari 9 um IRCW
+      Akari18                Akari 18 um IRCLW
       
       HNIRC2                 Keck NIRC2 H
       KpNIRC2                Keck NIRC2 Kp
       LpNIRC2                Keck NIRC2 Lp
+
+      MSXA                   MSX A
+      MSXC                   MSX C
+      MSXD                   MSX D
+      MSXE                   MSX E
+
+      IDENIS                 DENIS I BAND
+      JDENIS                 DENIS J BAND
+      KSDENIS                DENIS Ks BAND
+
+      GGAIA                  GAIA G BAND

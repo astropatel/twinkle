@@ -75,7 +75,8 @@ angstroms
 AKARI:
 from SVO profile service
 wavelength in angstrom
-Using lam_eff for wavelength
+Using lam_eff for wavelength: 90
+using lam_pivot for wavelength: 18,9
 
 
 NIRC2:
@@ -83,3 +84,9 @@ http://svo2.cab.inta-csic.es/svo/theory/fps3/index.php?id=Keck/NIRC2.H&&mode=bro
 
 filter data from NIRC2 website. 
 central wavelength and zero point is from SVO 
+
+DENIS, GAIA, MSX:
+from SVO profile service
+pivot wavelength used.
+
+
