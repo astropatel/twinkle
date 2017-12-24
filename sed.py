@@ -18,6 +18,7 @@
   7. Change init to only load pband files from mags2use.
   8. Calc_temp needs better docstring
 """
+from __future__ import print_function
 
 import os, re, operator
 import glob, string
@@ -29,14 +30,12 @@ import scipy.interpolate as intp
 import scipy.integrate as sintp
 
 try:
-    from astropy import constants as con
-except ImportError:
-    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
-try:
     from astropy.io import ascii
     from astropy.io import fits
+    from astropy import constants as con
+    import astropy.units as u
 except ImportError:
-    print 'Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.'
+    print('Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.')
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmial.com>, Joe Trollo'
 
@@ -185,19 +184,6 @@ class SEDTools:
             u = units['GAIA']
             self.GGAIApband = aspband(opj(fRSR,'GAIAG.dat'),inputUnits=u)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
         elif RSRFile is not None and not flat:
             self.pband = aspband(opj(fRSR, RSRFile), inputUnits=u)
         elif flat:
@@ -251,32 +237,41 @@ class SEDTools:
 
         return fjy,efjy
 
-    def Jy2cgs(self, nuFnu, DnuFnu=None):
+    def Jy2cgs(self, fluxNu,freq,lam=None):
         """ To convert specific flux in Jansky to erg/s/cm2.
         It assumes the wavelength is in Angstroms.
 
         Parameters:
         -----------
-        nuFnu: tuple(flt/array,flt/array): frequency in Hz at which flux
-               is found and flux in Janskies
-        DnuFnu: tuple(flt/array,flt/array): error in frequency measurement
-                and error in flux measurement
-
+        fluxNu: tuple(float/array,float/array) - flux and uncertainty in Jansky
+        freq: tuple(float,float) - frequency and uncertainty in freq in Hz
+        lam: tuple(float,float) - [optional]. Wavelength in angstroms and corresponding
+                                  uncertainty. If freq is None, then this will be used
+                                  to calculate a frequency.
         Return:
         --------
         A tuple with the flux and conversion error (Flux, dFlux) in erg/s/cm2.
         If no errors are given, dFlux = None
         """
-        nu, flux = np.asarray(nuFnu[0]), np.asarray(nuFnu[1])  # 2 ELEMENT TUPLE
-        y = (flux * nu) / 1e23
 
-        if DnuFnu is None:
-            dFlux = None
-        else:
-            dnu, dfnu = np.asarray(DnuFnu[0]), np.asarray(DnuFnu[1])
-            dFlux = np.sqrt((flux * dnu) ** 2 + (nu * dfnu) ** 2) / 1e23
+        flux_nu, eflux_nu = fluxNu
+        flux_nu, eflux_nu = np.asarray(flux_nu), np.asarray(eflux_nu)
 
-        return y, dFlux
+        if freq[0] is not None:
+            nu,enu = freq
+
+        elif freq[0] is None and lam is not None:
+            lam,elam = np.array(lam) * _ANG2CM
+            nu = _CS / lam
+            enu = _CS * elam / lam ** 2
+
+        else: print('Did you provide a wavelength?')
+
+
+        flux_cgs = (flux_nu * nu) / 1e23
+        eflux_cgs = np.sqrt((flux_cgs * enu) ** 2 + (nu * eflux_nu) ** 2) / 1e23
+
+        return flux_cgs, eflux_cgs
 
     def get_eff_wavelengths(self, mag_list):
         """
@@ -361,11 +356,11 @@ class SEDTools:
         elif band == 'Ic':
             mab = m_vega + 0.342
         else:
-            print 'Band ', band, ' doesn" exist. Please check bandpass.'
+            print('Band ', band, ' doesn" exist. Please check bandpass.')
             mab = None
 
         if mab == None:
-            print 'No conversion occured. Check variables'
+            print('No conversion occured. Check variables')
 
         return mab
 
@@ -635,7 +630,7 @@ class SEDTools:
             RSRminInd, RSRmaxInd = int(np.searchsorted(lambda_, band_min)), \
                                    int(np.searchsorted(lambda_, band_max))
             if (RSRmaxInd - RSRminInd) < 10:
-                print 'Resolution less than 10.'
+                print('Resolution less than 10.')
             # Create index array
             Ind = np.arange(RSRminInd, RSRmaxInd)
             # COLLECT ALL THE WAVELENGTH AND FLUX VALUES UNDER BANDPASS
@@ -662,7 +657,7 @@ class SEDTools:
                 RSRminInd, RSRmaxInd = int(np.searchsorted(lambda_i, band_min)), \
                                        int(np.searchsorted(lambda_i, band_max))
                 if (RSRmaxInd - RSRminInd) < 10:
-                    print 'Resolution less than 10.'
+                    print('Resolution less than 10.')
                 # Create index array
                 Ind = np.arange(RSRminInd, RSRmaxInd)
                 # COLLECT ALL THE WAVELENGTH AND FLUX VALUES UNDER BANDPASS
@@ -681,7 +676,7 @@ class SEDTools:
                 Sn = sintp.simps(flx0i * lam0i * RSRNew, lam0i) / sintp.simps(lam0i * RSRNew, lam0i)
 
                 if np.isnan(np.sum(Sn)):
-                    print 'Is nan', np.isnan(np.sum(Sn))
+                    print('Is nan', np.isnan(np.sum(Sn)))
 
                 Sn_arr = np.append(Sn_arr, Sn)
 
@@ -849,17 +844,11 @@ class SEDTools:
 
         # CHECK UNITS
         x = lambda_.copy().astype('float32')
-        if units == 'angstrom':
-            x *= 1e-8
-        elif units == 'microns':
-            x *= 1e-4
-        elif units == 'meters':
-            x *= 1e-2
-        elif units == 'cm':
-            x = x
-        else:
-            raise ValueError('Unit was not recognized')
-
+        if units == 'angstrom':  x *= 1e-8
+        elif units == 'microns': x *= 1e-4
+        elif units == 'meters':  x *= 1e-2
+        elif units == 'cm':      x = x
+        else: raise ValueError('Unit was not recognized')
 
         temp0 = p0[0]
         # CHECK PARAMETERS AND NORMALIZATION
@@ -968,6 +957,18 @@ class SEDTools:
         mod_arr = mod_arr ** pwr
         flux = bbflux * mod_arr
         return flux
+
+    def doubleBB(self,lambda_,p0, su2ea1=1, bands=None,
+                  units='angstrom', bulk=False, **kwargs):
+
+
+        p01,p02 = p0[0:2], p0[2:]
+        B1 = self.blackbody(lambda_,p01,su2ea1=su2ea1, bands=bands,
+                  units=units, bulk=bulk, **kwargs)
+        B2 = self.blackbody(lambda_,p02,su2ea1=su2ea1, bands=bands,
+                  units=units, bulk=bulk, **kwargs)
+
+        return B1 + B2
 
     def calcBBTemp(self, T0, lamArr, flxArr):  # lam1,lam2,Flx1,Flx2):
         """Assumes Flux in units of erg/s/cm2/A and returns temperature in kelvin.
@@ -1119,7 +1120,7 @@ class SEDTools:
             yphot *= norm_wise_nir
         else:
             RJ_On = False
-            print 'Unable to scale SED to W1 and W2'
+            print('Unable to scale SED to W1 and W2')
 
         return norm_wise_nir, yphot, yphot_unsc, RJ_On
 
@@ -1160,8 +1161,8 @@ class SEDTools:
 
         FluxSED = func(lam2Fit, p0, 1, griddata, tempArr, mg4scale)
 
-        print 'Bands used to fit photosphere: %s'%np.str(mg4phot)
-        print 'Bands used to scale photosphere: %s'%np.str(mg4scale)
+        print('Bands used to fit photosphere: %s'%np.str(mg4phot))
+        print('Bands used to scale photosphere: %s'%np.str(mg4scale))
 
         # SURFACE TO OBSERVED FLUX NORMALIZATION WEIGHTED FROM ERRORS
         FluxNorm = np.average(Flx2scale / FluxSED, weights=1. / np.array(Flx2scaleErr))
@@ -1191,14 +1192,14 @@ class SEDTools:
             self.chi2 = mf.fnorm / mf.dof
         except ZeroDivisionError:
             self.chi2 = -1
-            print 'Degrees of freedom = 0'
-        print 'chi2 = %.2f' % self.chi2
+            print('Degrees of freedom = 0')
+        print('chi2 = %.2f' % self.chi2)
 
         radius = p0[1]
         tempnew = p0[0] * 1000.
 
-        print 'Fitted Stellar Radius: %.3f Rsun' %radius
-        print 'Fitted Stellar Temperature: %i K' %tempnew
+        print('Fitted Stellar Radius: %.3f Rsun' %radius)
+        print('Fitted Stellar Temperature: %i K' %tempnew)
 
         return radius,tempnew,mf
 
@@ -1303,7 +1304,7 @@ class DataLogistics:
                     StarsDat['W2me'] = StarsDat.pop('W2meC')
 
         else:
-            print 'Star"s data already loaded'
+            print('Star"s data already loaded')
 
 
     def loadEmpiricalData(self,filename):
@@ -1336,19 +1337,19 @@ class DataLogistics:
         allg = np.unique(StarsDat['grav'])
         allmet = np.unique(StarsDat['met'])
         allmod = np.unique(StarsDat['model'])
-        print '-------------------------------'
-        print '      Loading All Gridmodels   '
+        print('-------------------------------')
+        print('      Loading All Gridmodels   ')
 
         for mod in allmod:
             for z in allmet:
                 for g in allg:
                     if (mod, g, z) not in MegaGrid:
                         MegaGrid[(mod, g, z)] = getattr(GMod, 'get_{}Grids'.format(mod))(g, z)
-                        print 'Loaded %s of g=%s, met=%s'%(mod,g,z)
+                        print('Loaded %s of g=%s, met=%s'%(mod,g,z))
 
 
-        print '       Done Loading Models     '
-        print '-------------------------------'
+        print('       Done Loading Models     ')
+        print('-------------------------------')
 
 
 class GridModels:
@@ -1438,7 +1439,7 @@ class GridModels:
                         grid_i1 = np.insert(grid_i1, zr, zr, axis=1)
                         gridnp = np.vstack(([gridi], [grid_i1]))
                     else:
-                        print 'Grids are not matched between %d, %d' % (tempArr[i], tempArr[i + 1])
+                        print('Grids are not matched between %d, %d' % (tempArr[i], tempArr[i + 1]))
 
                 i += 2
             else:
@@ -1455,7 +1456,7 @@ class GridModels:
                         gridi = np.insert(gridi, zr, zr, axis=1)
                         gridnp = np.vstack((gridnp, [gridi]))
                     else:
-                        print 'Grids are not matched between %d, %d' % (tempArr[i], tempArr[i - 1])
+                        print('Grids are not matched between %d, %d' % (tempArr[i], tempArr[i - 1]))
 
                 i += 1
         lam_arr_all = gridnp[:, 0]
@@ -1515,7 +1516,7 @@ class GridModels:
                 hdui = fits.open(f)
                 ti = hdui[0].header['TEFF']
             except:
-                print "Something's wrong with %s" % f
+                print("Something's wrong with %s" % f)
             tbdata = hdui[1].data
             colnames = np.array(hdui[1].columns.names)
             # CHECK TO SEE IF GRAVITY SELECTED IS IN FITS FILE
@@ -1525,7 +1526,7 @@ class GridModels:
                 lam, flux = tbdata['WAVELENGTH'], tbdata[grav]
                 lam, flux = np.array(lam), np.array(flux)
             else:
-                print "Gravity %s was not found in file %s" % (grav, f)
+                print("Gravity %s was not found in file %s" % (grav, f))
             dat = np.array([lam, flux])
             ddat[str(ti / 1000.)] = dat
             # ddat[str(ti)] = dat
@@ -1745,7 +1746,8 @@ class Bandpass:
 
         except IndexError:
             isowavelength = self.pivotWavelength()
-            print 'Error in extracting isowavelength. Using pivotWavelength instead for at %.5f' %isowavelength
+            print('Error in extracting isowavelength')
+            print('Using pivotWavelength instead for at %.5f' %isowavelength)
 
         return isowavelength
 
@@ -1762,7 +1764,7 @@ class Bandpass:
             zp = self.zmdata[1]
             zperr = self.zmdata[2]
         except IndexError:
-            print 'No zero point flux available. Check RSR file %s' % self.file
+            print('No zero point flux available. Check RSR file {}'.format(self.file))
 
         zpflx, zpflxErr = float(zp), float(zperr)
 
@@ -1773,7 +1775,8 @@ class Bandpass:
         try:
             isofrequency = float(self.zmdata[3])
         except IndexError:
-            print 'No other option for frequency available. Place value in header file'
+            print('No other option for frequency available.'
+                  ' Place freq in header file of {}.'.format(self.file))
 
         return isofrequency
 
@@ -1784,7 +1787,7 @@ class Bandpass:
             zp = self.zmdata[4]
             zperr = self.zmdata[5]
         except IndexError:
-            print 'No zero point flux available. Check RSR file %s' % self.file
+            print('No zero point flux available. Check RSR file {}'.format(self.file))
 
         zpflx, zpflxErr = float(zp), float(zperr)
 

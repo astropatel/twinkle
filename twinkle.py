@@ -8,9 +8,8 @@ Issues and changes that need to be made:
  5. Have code use more than Bt-Vt to interpolate mamajek's file
 
 """
-
+from __future__ import print_function
 import os
-import sys
 import copy
 import json
 import logging
@@ -25,13 +24,14 @@ logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
 try:
     from astropy import constants as con
 except ImportError:
-    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
+    print('Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.')
 
 try:
     import matplotlib.pyplot as plt
 except ImportError:
-    print 'Matplotlib doesnt seem to be installed detected. Fine by me, but now you cant use the awesome' \
-          'plotting function we have. Sucks for you.'
+    print('Matplotlib doesnt seem to be installed detected.')
+    print('Fine by me, but now you cant use the awesome'
+          'plotting function we have. Sucks for you.')
 
 STools = sed.SEDTools()
 
@@ -147,7 +147,7 @@ class Star:
 
         elif self.sid is not None and self.starname is not None:
             raise ValueError('Provide either name of location index, not both.')
-        logging.info('WORKING STAR:%s'%self.starname)
+        logging.info('WORKING STAR:{}'.format(self.starname))
 
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
@@ -374,18 +374,27 @@ class Star:
             #OTHERWISE ADD IT.
             else:
                 if '_flux' in mv:
-                    mv = mv.strip('_flux')
-                    freq = eval('STools.{}pband.isoFrequency()'.format(mv))
                     fj = temp_mf
+                    mv = mv.strip('_flux')
+                    lam = eval('STools.{}pband.isoWavelength()'.format(mv))
+                    try:
+                        freq = eval('STools.{}pband.isoFrequency()'.format(mv))
+                    except UnboundLocalError:
+                        print('Iso Freq. for {} will be calculated using'
+                              ' iso wavelength.'.format(mv))
+                        freq = None
+
                     # WHEN THERE IS A NULL VALUE
                     try:
                         efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
                     except ValueError:
                         efj = 0.05 * fj
-                    fcgs, efcgs = np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
-                                  / eval('STools.{}pband.isoWavelength()'.format(mv))
+
+                    # DIVIDE BY LAMBDA TO OBTAIN ERG/S/CM2/ANG
+                    fcgs, efcgs = np.array(STools.Jy2cgs((fj,efj), (freq,0), (lam,0) )) / lam
+
                     fmag, efmag  = STools.fluxZPLam2mag(eval('STools.{}pband'.format(mv)),
-                                         fcgs,efcgs)
+                                                        fcgs,efcgs)
 
                     vegaMagDict_temp[mv] = fmag
                     vegaMagErrDict_temp[mv] = efmag
