@@ -58,9 +58,6 @@ IRAS:
 x:wavelength(Angstrom)
 y:rsr
 
-
-
-
 SPITZER: 
 MIPS: FROM http://irsa.ipac.caltech.edu/data/SPITZER/docs/mips/calibrationfiles/spectralresponse/
 Lambda in microns

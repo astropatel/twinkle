@@ -179,7 +179,7 @@ class SEDTools:
             u = units['DENIS']
             self.IDENISpband = aspband(opj(fRSR,'DENISI.dat'),inputUnits=u)
             self.JDENISpband = aspband(opj(fRSR,'DENISJ.dat'),inputUnits=u)
-            self.KsDENISpband = aspband(opj(fRSR,'DENISKs.dat'),inputUnits=u)
+            self.KSDENISpband = aspband(opj(fRSR,'DENISKs.dat'),inputUnits=u)
 
             u = units['GAIA']
             self.GGAIApband = aspband(opj(fRSR,'GAIAG.dat'),inputUnits=u)
@@ -851,7 +851,7 @@ class SEDTools:
         else: raise ValueError('Unit was not recognized')
 
         temp0 = p0[0]
-        # CHECK PARAMETERS AND NORMALIZATION
+        # CHECK PARAMETERS AND NsORMALIZATION
         try:
             su2ea = (p0[1] ** 2) * su2ea1
         except IndexError:
@@ -1197,9 +1197,13 @@ class SEDTools:
 
         radius = p0[1]
         tempnew = p0[0] * 1000.
+        erad = errors[1]
+        etemp = errors[0] * 1000.
 
-        print('Fitted Stellar Radius: %.3f Rsun' %radius)
-        print('Fitted Stellar Temperature: %i K' %tempnew)
+        # print(r'Fitted Stellar Radius: %.3f $\pm$ Rsun' %radius)
+        # print(r'Fitted Stellar Temperature: %i K' %tempnew)
+        print(r'Fitted Stellar Radius: {:.3f} +/- {:.3f} Rsun'.format(radius,erad))
+        print(r'Fitted Stellar Temperature: {:d} +/- {:d} K'.format(int(tempnew),int(etemp)))
 
         return radius,tempnew,mf
 

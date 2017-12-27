@@ -258,8 +258,7 @@ class Star:
                 self.StarPhotosphere[1] = yphot
 
 
-    def writeSED(self, filename='sed.txt',
-                 comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom,\
+    def writeSED(self, filename='sed.txt',comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom,\
                           Teff={:.1f}K,rad={:.3f}Rsol.\n'):
         """
         Function to write out fitted SED to file.
@@ -480,6 +479,30 @@ class Star:
             self.vegaMagErrDict[tmp] = vegaMagErrDict_temp[tmp]
 
 
+    def calc_excessflux(self):
+
+
+        # CREATE NEW tauA DICTIONARY FOR EXCESS FLUX
+        self.excessFlux = {}
+        self.excessFlux_e = {}
+        self.excessFlux_wave = {}
+
+        # CALCULATE EXCESS FLUX AND ADD TO TAUA
+        for band in self.mags4Dust:
+            exflux = self.flux[band + '_flux'] - self.photFlux[band]
+            print(band,' excess flux ',exflux, 'erg/s/cm2/ang')
+            self.excessFlux[band + '_flux'] = exflux
+            self.excessFlux_wave[band] = self.wave[band]
+            self.excessFlux_e[band + '_flux'] = self.fluxerr[band + '_flux']
+
+        self.fluxEx = np.array(zip(*sorted(self.excessFlux.items()))[1])
+        magsorder, self.waveEx = np.array(zip(*sorted(self.excessFlux_wave.items())))
+        self.waveEx = self.waveEx.astype('float64')
+        self.efluxEx = np.array(zip(*sorted(self.excessFlux_e.items()))[1])
+
+
+
+        return
 
     def keep_unsatmags(self, vegaDict, magsCheck):
         """
@@ -627,6 +650,12 @@ class Star:
                 plist = np.append(plist, 'W2')
 
         return plist
+
+    def resetFullSpectrum(self):
+
+        self.fullspectrum = self.StarPhotosphere[1][:]
+
+        return
 
     def fitPhotosphere(self, sconst, T0, model, grav, met):
         """
