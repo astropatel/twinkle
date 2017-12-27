@@ -186,8 +186,6 @@ class Star:
 
 
         #except KeyError:
-
-
         # ================================================================
         #                      Convert Photometry to Flux
         # ================================================================
@@ -470,6 +468,10 @@ class Star:
             self.mags4Phot  = mags4Phot0
             self.mags4scale = mags4scale0
 
+        self.mags2use   = list(np.sort(self.mags2use))
+        self.mags4Dust  = list(np.sort(self.mags4Dust))
+        self.mags4Phot  = list(np.sort(self.mags4Phot))
+        self.mags4scale = list(np.sort(self.mags4scale))
 
         # REMOVE NON-USED MAGNITUDES FROM DICTIONARY
         #  ========================================

@@ -876,6 +876,7 @@ class SEDTools:
         flux_arr = np.array([])
         if bands is not None:
             for band in bands:
+               # print(band,'bbcalc')
                 pband = eval('self.' + band + 'pband')
                 xmin, xmax = x.min() * _CM2ANG, x.max() * _CM2ANG  # lambda_.min(), lambda_.max()
                 pb_xmin, pb_xmax = pband.wavelength.min(), pband.wavelength.max()
