@@ -140,7 +140,8 @@ class Star:
                                  % self.starname)
             else:
                 self.sid = ind[0]
-                self.starname = self.starsdat['MainName'][self.sid]
+                self.starname = \
+                    self.starsdat['MainName'][self.sid]
 
         elif self.sid is None and self.starname is None:
             raise ValueError('No object index or ID was provided')
