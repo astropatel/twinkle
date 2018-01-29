@@ -483,6 +483,14 @@ class Star:
 
 
     def calc_excessflux(self):
+        """
+        Calculates the excess flux at the passbands listed in mags4Dust
+        using the photospheric fit.
+
+        flux and uncertainty for excesses are stored in self.fluxEx and self.efluxEx.
+        Wavelengths are in self.Ex in angstroms.
+
+        """
 
 
         # CREATE NEW tauA DICTIONARY FOR EXCESS FLUX
@@ -503,9 +511,6 @@ class Star:
         self.waveEx = self.waveEx.astype('float64')
         self.efluxEx = np.array(zip(*sorted(self.excessFlux_e.items()))[1])
 
-
-
-        return
 
     def keep_unsatmags(self, vegaDict, magsCheck):
         """
@@ -704,12 +709,10 @@ class Star:
 
         Parameters
         ----------
-        ax
-        color
-        kwargs
+        ax : matplotlib axis object
+        color: matplotlib color identifier.
+        kwargs : additional matplotlib kwargs.
 
-        Returns
-        -------
 
         """
         xlam = self.StarPhotosphere_down[0]
@@ -763,9 +766,7 @@ class Star:
         linestyle (string): linestyle
         lw (float): linewidth
 
-        Returns
-        -------
-
+        
         """
 
         xlam, ylam = self.StarPhotosphere

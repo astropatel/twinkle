@@ -917,6 +917,18 @@ class SEDTools:
         return flux_arr
 
     def calcRJ_spectrum(self, xarr, yarr):
+        """
+        
+        Parameters
+        ----------
+        xarr
+        yarr
+
+        Returns
+        -------
+
+        """
+
 
         slope = (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
         yint = yarr[0] - slope * xarr[0]
