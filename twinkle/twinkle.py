@@ -718,7 +718,7 @@ class Star:
         xlam = self.StarPhotosphere_down[0]
         ax.fill_between(xlam * _ANG2MICRON,
                         self.StarPhotosphere_down[1]*xlam,
-                        self.StarPhotosphere_up[1] *xlam,color=color,alpha=0.4)
+                        self.StarPhotosphere_up[1] *xlam,coMlor=color,alpha=0.4)
 
     def plot_photosphere(self,ax,pointsize=4,lcolor='orange',pcolor='orange',
                          marker='o',linestyle='--',lw=2,**kwargs):

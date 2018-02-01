@@ -1133,18 +1133,23 @@ class SEDTools:
                        fluxm, fluxme, synflux):
 
         """
+        Use this to scale the fitted stellar SED to a set of particular bands for whatever reason.
 
         Parameters
         ----------
-        scbdlist
-        usebdlist
-        yphot
-        fluxm
-        fluxme
-        synflux
+        scbdlist : string array of band identifiers to scale the fitted photosphere.
+        usebdlist : all the bands that are used.
+        yphot : fitted photospheric flux
+        fluxm : broad band photometric data for all bands in usebdlist
+        fluxme : uncertainties in fluxm
+        synflux : synthetic photospehric flux at each band in usebdlist.
 
         Returns
         -------
+        phot_norm_fac: factor calculated to scale the SED
+        yphot : scaled flux array
+        yphot_unsc: pre-scaled flux
+        RJ_On: boolean to tell you whether this was done -- not sure why I still have this.
 
         """
 
@@ -1182,20 +1187,23 @@ class SEDTools:
     def fit_photosphere(self, xlam, yfluxdat, p0, su2ea2,
                         modinfo, magfit, func):
         """
+        Find the best fit photospheric model to the photometric data.
+        Fits are done using mpfit (Levenberg-Marquardt algorithm).
 
         Parameters
         ----------
-        xlam
-        yfluxdat
-        p0
-        su2ea2
-        modinfo
-        magfit
-        func
+        xlam :  string array of wavelength identifiers of the bands that are going to be used to fit.
+        yfluxdat : flux of the data at wavelengths in xlam to be fit.
+        p0: Initial parameters for temperature and stellar radius. Temperature is required, Radius is not.
+        su2ea2 : scaling factor ( Rsun^2  / Star_distance^2)
+        modinfo: Which model type to use based on (model name, log(g), met) to bse used as keys in MegaGrid
+        magfit: Dict of string arrays of band identifiers keyed by 'photmags' (bands used to fit the model) and
+                'scalemags' (which bands to use to scale the raw stellar flux to observed flux to first order.
+        func: Function to use to fit the data.
 
         Returns
         -------
-
+        Fitted stellar radius, temperature and mpfit object.
         """
 
         gdat = MegaGrid[modinfo]
@@ -1317,8 +1325,6 @@ class DataLogistics:
         # self.H_lim, self.Ks_lim = -1000, -1000
         # self.B_lim, self.V_lim = -1000, -1000
 
-        import pdb
-        pdb.set_trace()
         workingdir = directories.WorkingDir(specs['folders']['topdir'])
         workingdir = opj(workingdir,specs['folders']['codedir'])
 
@@ -1329,7 +1335,6 @@ class DataLogistics:
 
         self.loadAllStars(starfile, specs['changekeys'])
         self.loadAllModels()
-        # pdb.set_trace()
         self.loadEmpiricalData(empfile)
 
     def loadAllStars(self, starfile, changekeys):
@@ -1366,13 +1371,12 @@ class DataLogistics:
 
     def loadEmpiricalData(self, filename):
         """
+        Loads the empirically derived stellar color data from
+        Pecaut & Mamajek (2012) into EmpDat global dictionary.
 
         Parameters
         ----------
-        filename
-
-        Returns
-        -------
+        filename : file location of the empirical data.
 
         """
 
@@ -1384,10 +1388,10 @@ class DataLogistics:
     def loadAllModels(self):
 
         """
-
-        Returns
-        -------
-
+        Load all the unique stellar photospheric models based on
+        the input star file and all the options that are needed.
+        Everything is sorted in a dictionary with keys of
+        (model, log(g), metallicity).
         """
 
         allg = np.unique(StarsDat['grav'])
