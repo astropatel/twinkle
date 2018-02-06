@@ -24,7 +24,8 @@ logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
 try:
     from astropy import constants as con
 except ImportError:
-    print('Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.')
+    print('Does not seem Astropy is installed, or at least the constants '
+          'package is messed up. We kinda need this. Get to it yo.')
 
 try:
     import matplotlib.pyplot as plt
