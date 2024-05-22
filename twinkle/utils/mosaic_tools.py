@@ -13,7 +13,6 @@ from __future__ import print_function
 
 __author__ = 'Rahul I. Patel'
 
-
 import scipy
 
 import random as rnd
@@ -182,7 +181,6 @@ class ImageTools:
         import math as ma
         # from photutils.detection import findstars
 
-
         # pdfs = findstars
         # kern = pdfs._FindObjKernel(fwhm_gauss_kern,1.0,0.0,1.5)
         sigma = fwhm_gauss_kern / (2.0 * ma.sqrt(2.0 * ma.log(2.0)))
@@ -249,7 +247,7 @@ class PlanetSort:
         mat_var_bin = np.array([])
         var_max = int(var_max)
         # print 'var_name in prevar', var_name
-        for i in xrange(var_max + 1):
+        for i in range(var_max + 1):
             try:
                 temp_binarr = data_stuff[var_name + '_' + str(int(i))]
             except:
@@ -702,7 +700,7 @@ class RandTools:
         theta = ma.acos(1. - 2 * u)
         phi = rnd.uniform(min_th, max_th)
 
-        return [r, theta, phi]
+        return r, theta, phi
 
     def random_powerlaw(self, pwr, min_bnd, max_bnd, nsample=1):
         """function to randomly generate a number from the continuous
@@ -989,7 +987,7 @@ class StatTools:
         #
         return (MData, sriOut, runMeanOut, runStdOut, runStdN)
 
-    def mode2(self,ndarray, axis=0):
+    def mode2(self, ndarray, axis=0):
         """
         Taken from https://stackoverflow.com/questions/16330831/most-efficient-way-to-find-mode-in-numpy-array
         User: devdev, created on 2/27/2016
@@ -1053,8 +1051,6 @@ class StatTools:
         index = numpy.ogrid[slices]
         index.insert(axis, numpy.argmax(counts, axis=axis))
         return sort[index], counts[index]
-
-
 
     def creep_mean(self, MData, dOs=None, dSr=None, smoothed=False,
                    XLimits=[False, False], frac=0.1, hipNames=None):
@@ -1136,7 +1132,7 @@ class StatTools:
                 merged = np.array([veciy, vecix, veciyerr, ind_reginew]).transpose()
                 sortedMerged = np.array(sorted(merged, key=operator.itemgetter(0)))
                 veciy, vecix, veciyerr, ind_reginew = sortedMerged[:, 0], sortedMerged[:, 1], \
-                                                      sortedMerged[:,2], sortedMerged[:, 3]
+                                                      sortedMerged[:, 2], sortedMerged[:, 3]
 
                 meani, mediani = np.average(veciy, weights=1. / veciyerr), np.median(veciy)
                 check = abs((meani - mediani) / meani)
@@ -1188,7 +1184,7 @@ class StatTools:
             # boundaries.append({'i':x0i,'f':xfi,'std':sigmaiy,'sem':semi,'median':mediani,'mean':meani})
             x0i += dSr
             xfi += dSr
-            #print(x0i, xfi, xf)
+            # print(x0i, xfi, xf)
 
         # pdb.set_trace()
         # THIS NEXT SECTION TO GIVE REGIONS BEFORE 0.5(XFI-X0I) and after
@@ -1312,7 +1308,7 @@ class StatTools:
                 for i in xrange(len(veciy0)):
 
                     if ((frac_pos >= 0.8 and frac_pos <= 1.) and (frac_neg <= 1. and frac_neg >= 0.8)) or (
-                                float(i) / Ntot) >= 0.5:
+                            float(i) / Ntot) >= 0.5:
                         break
 
                     minVeciy, maxVeciy = abs(veciy[0] - meani), abs(veciy[-1] - meani)
@@ -1641,7 +1637,7 @@ class FittingTools:
 
         return y
 
-    def twoD_Gaussian(self, (x, y), amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    def twoD_Gaussian(self, x, y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
         """2D Gaussian taken from StackOverflow's users: ali_m (02/14) and 
         Kokomoking."""
 
@@ -2804,12 +2800,12 @@ class mpfit:
         if (limited is not None) and (limits is not None):
             # Error checking on limits in parinfo
             if np.any((limited[:, 0] & (xall < limits[:, 0])) |
-                              (limited[:, 1] & (xall > limits[:, 1]))):
+                      (limited[:, 1] & (xall > limits[:, 1]))):
                 self.errmsg = 'ERROR: parameters are not within PARINFO limits'
                 return
             if np.any((limited[:, 0] & limited[:, 1]) &
-                              (limits[:, 0] >= limits[:, 1]) &
-                              (pfixed == 0)):
+                      (limits[:, 0] >= limits[:, 1]) &
+                      (pfixed == 0)):
                 self.errmsg = 'ERROR: PARINFO parameter limits are not consistent'
                 return
 
@@ -3180,7 +3176,7 @@ class mpfit:
 
                 # Check for over/underflow
                 if ~np.all(np.isfinite(wa1) & np.isfinite(wa2) & \
-                                   np.isfinite(x)) or ~np.isfinite(ratio):
+                           np.isfinite(x)) or ~np.isfinite(ratio):
                     errmsg = ('''ERROR: parameter or function value(s) have become
                         'infinite; check model function for over- 'and underflow''')
                     self.status = -16
@@ -3301,7 +3297,6 @@ class mpfit:
     #		  endif
     #	  endif
     #  endif
-
 
     # Procedure to parse the parameter values in PARINFO, which is a list of dictionaries
     def parinfo(self, parinfo=None, key='a', default=None, n=0):
@@ -3464,7 +3459,6 @@ class mpfit:
     ##============================================================================================
     ##============================================================================================
 
-
     #	 Original FORTRAN documentation
     #	 **********
     #
@@ -3595,7 +3589,6 @@ class mpfit:
     #
     # Note that it is usually never necessary to form the Q matrix
     # explicitly, and MPFIT does not.
-
 
     def qrfac(self, a, pivot=0):
         #
@@ -4053,7 +4046,7 @@ class mpfit:
             if ptied[i] == '':
                 continue
             cmd = 'p[' + str(i) + '] = ' + ptied[i]
-            exec (cmd)
+            exec(cmd)
         return p
 
     #	 Original FORTRAN documentation

@@ -24,8 +24,8 @@ import os, re, sys, operator
 import glob, string
 import numpy as np
 
-from utils import directories
-from utils import mosaic_tools as mt
+from .utils import directories
+from .utils import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
 
@@ -929,7 +929,6 @@ class SEDTools:
 
         """
 
-
         slope = (yarr[1] - yarr[0]) / (xarr[1] - xarr[0])
         yint = yarr[0] - slope * xarr[0]
 
@@ -1003,7 +1002,7 @@ class SEDTools:
             for i in range(len(p0) / 2):
                 p0i = p0[i:i + 2]
                 B_total.append(self.blackbody(lambda_, p0i, su2ea1=su2ea1, bands=bands,
-                                          units=units, bulk=bulk, **kwargs))
+                                              units=units, bulk=bulk, **kwargs))
 
             B_total = np.sum(np.array(B_total), axis=0)
 
@@ -1011,8 +1010,6 @@ class SEDTools:
 
         else:
             sys.exit('You should have two free parameters for each blackbody youd like to fit')
-
-
 
     def doubleBB(self, lambda_, p0, su2ea1=1, bands=None,
                  units='angstrom', bulk=False, **kwargs):
@@ -1223,8 +1220,8 @@ class SEDTools:
 
         FluxSED = func(lam2Fit, p0, 1, griddata, tempArr, mg4scale)
 
-        print('Bands used to fit photosphere: %s' % np.str(mg4phot))
-        print('Bands used to scale photosphere: %s' % np.str(mg4scale))
+        print('Bands used to fit photosphere: {}'.format(', '.join(mg4phot)))
+        print('Bands used to scale photosphere: {}'.format(', '.join(mg4scale)))
 
         # SURFACE TO OBSERVED FLUX NORMALIZATION WEIGHTED FROM ERRORS
         FluxNorm = np.average(Flx2scale / FluxSED, weights=1. / np.array(Flx2scaleErr))
@@ -1326,12 +1323,12 @@ class DataLogistics:
         # self.B_lim, self.V_lim = -1000, -1000
 
         workingdir = directories.WorkingDir(specs['folders']['topdir'])
-        workingdir = opj(workingdir,specs['folders']['codedir'])
+        workingdir = opj(workingdir, specs['folders']['codedir'])
 
         starfile = opj(workingdir, specs['files']['starfile'])
 
         empfile = opj(workingdir, specs['folders']['supportdir'],
-                                  specs['files']['bv_colorfile'])
+                      specs['files']['bv_colorfile'])
 
         self.loadAllStars(starfile, specs['changekeys'])
         self.loadAllModels()
@@ -1735,7 +1732,7 @@ class Bandpass:
             self.wavelength = 3e8 / (self.wavelength * 1e9)
             self.wavelength *= 1e10
         else:
-            raise Exception, "DAFUQ? Units no make sense"
+            raise Exception("DAFUQ? Units no make sense")
 
         # Sort into ascending order of wavelength otherwise normalization will be wrong
 
@@ -1771,8 +1768,8 @@ class Bandpass:
 
         self.S = re.compile('^#\!|\[[0-9]+\]\/|\[ *\w *, *\w+ *\]\/')
         header = re.split(self.S, first)[1:-1]
-        #zmdata = map(string.strip, header)
-        zmdata = np.array(header,dtype='float')
+        # zmdata = map(string.strip, header)
+        zmdata = np.array(header, dtype='float')
 
         return zmdata
 
@@ -1883,6 +1880,6 @@ class Flatbandpass:
                 self.pivotWavelength = 3e8 / (self.pivotWavelength * 1e9)
                 self.pivotWavelength *= 1e10
             else:
-                raise Exception, "DAFUQ? Units no make sense"
+                raise Exception("DAFUQ? Units no make sense")
 
             self.isoFrequency = _CS / self.isoWavelength
