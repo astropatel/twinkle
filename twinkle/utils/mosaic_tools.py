@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 """
  mosaic_tools by Rahul I. Patel (ri.patel272@gmail.com)
@@ -24,6 +24,7 @@ import scipy.interpolate as intp
 import scipy.optimize as opt
 from matplotlib.colors import LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from functools import reduce
 
 try:
     from astropy.io import fits
@@ -303,7 +304,7 @@ class PlanetSort:
             output: Numpy array of indices
         """
         ind_spt = np.array([])
-        for i in xrange(len(spt_arr)):
+        for i in range(len(spt_arr)):
             # if first character in spt_array[i] corresponds to matching spt.
             if spt_arr[i].rfind(spt) == 0:
                 ind_spt = np.append(ind_spt, i)
@@ -379,7 +380,7 @@ class PlanetSort:
 
         else:
 
-            for i in xrange(len(sc_ind)):
+            for i in range(len(sc_ind)):
                 ind = sc_ind[i]
                 if len(sc) == 0:
                     # sc = np.array([find_scores(ind_dist, ind_age, ind_spt, mat[:,i])])
@@ -435,7 +436,7 @@ class PlanetSort:
         ##if name and spt of the star are in the file
         if name and spt:
             write_format = write_format = '%15s \t%8s'
-            for j in xrange(len(head_name) - 2):
+            for j in range(len(head_name) - 2):
                 write_format += ' \t%8.2f'
         ##if name but not spt of star are in the file
         elif name and not spt:
@@ -445,7 +446,7 @@ class PlanetSort:
         ##if not name but spt in the file
         elif spt and not name:
             write_format = '%8s'
-            for j in xrange(len(head_name) - 2):
+            for j in range(len(head_name) - 2):
                 write_format += ' \t%8.2f'
         ##if name and spt are not in the file
         else:
@@ -454,7 +455,7 @@ class PlanetSort:
 
         header = ''
         ##CREATE HEADER
-        for m in xrange(len(head_name)):
+        for m in range(len(head_name)):
             header += head_name[m] + '\t'
         header += '\n'
 
@@ -480,7 +481,7 @@ class ArrayTools:
         aux = np.array([])
 
         if N > 1:
-            for i in xrange(N - 1):
+            for i in range(N - 1):
                 if aux.size == 0:
 
                     aux = np.intersect1d(arrays[i], arrays[i + 1])
@@ -510,7 +511,7 @@ class ArrayTools:
         aux = np.array([])
 
         if N > 1:
-            for i in xrange(N - 1):
+            for i in range(N - 1):
                 if aux.size == 0:
                     aux = np.union1d(arrays[i], arrays[i + 1])
                 else:
@@ -534,7 +535,7 @@ class ArrayTools:
         Dict = Dict
         arr = np.array([])
 
-        for i in xrange(len(keys)):
+        for i in range(len(keys)):
             arr = np.append(arr, Dict[keys[i] + extra])
 
         return arr
@@ -589,7 +590,7 @@ class ReadWrite_Tools:
         header = ''
         if nowrite is not None:
             nowrite = np.array(nowrite)
-        for m in xrange(len(listnew)):
+        for m in range(len(listnew)):
             if nowrite is None:
                 header += listnew[m] + delimiter
             else:
@@ -631,7 +632,7 @@ class ReadWrite_Tools:
         ##create dictionary with index and column names as val and keys
         ##and vice versa
         name_dict2 = dict(enumerate(names))
-        name_dict3 = dict(zip(name_dict2.values(), name_dict2.keys()))
+        name_dict3 = dict(list(zip(list(name_dict2.values()), list(name_dict2.keys()))))
         ## gather
         dupcolname = data[:, name_dict3[dupcol]]
 
@@ -640,14 +641,14 @@ class ReadWrite_Tools:
         if duplicates is None:
 
             scount = collections.Counter(dupcolname)
-            ky_set1, val_set1 = np.array(scount.keys()), np.array(scount.values())
+            ky_set1, val_set1 = np.array(list(scount.keys())), np.array(list(scount.values()))
             ind_dup = np.where(val_set1 > 1)[0]
             duplicate_list = ky_set1[ind_dup]
         else:
             duplicate_list = duplicates
 
         ind_dup_infile = np.array([])
-        for i in xrange(len(duplicate_list)):
+        for i in range(len(duplicate_list)):
             ind_dup_infilei = np.where(duplicate_list[i] == dupcolname)[0]
             ind_dup_infile = np.append(ind_dup_infile, ind_dup_infilei)
 
@@ -1009,7 +1010,7 @@ class StatTools:
         elif ndarray.size == 0:
             raise Exception('Cannot compute mode on empty array')
         try:
-            axis = range(ndarray.ndim)[axis]
+            axis = list(range(ndarray.ndim))[axis]
         except:
             raise Exception('Axis "{}" incompatible with the {}-dimension array'.format(axis, ndim))
 
@@ -1224,7 +1225,7 @@ class StatTools:
         dealing with ONE bin. But when using multiiple bins, the current convergence
         criteria is insufficient."""
 
-        print
+        print()
         'updated'
         Data = MData.copy()
         vecx, vecy = Data[0], Data[1]
@@ -1272,7 +1273,7 @@ class StatTools:
         while xfi <= xf:
 
             if xfi == xf:  # invoked if region_i right boundary == limit to include edge points.
-                print
+                print()
                 'at the end point'
                 ind_regi = np.where((vecx >= x0i) & (vecx <= xfi))[0]
             else:  # otherwise dont' include right points
@@ -1305,7 +1306,7 @@ class StatTools:
                 frac_neg = 0.0
                 Nstop = int(NpointStop / 2.)
                 veciy0 = veciy
-                for i in xrange(len(veciy0)):
+                for i in range(len(veciy0)):
 
                     if ((frac_pos >= 0.8 and frac_pos <= 1.) and (frac_neg <= 1. and frac_neg >= 0.8)) or (
                             float(i) / Ntot) >= 0.5:
@@ -1326,7 +1327,7 @@ class StatTools:
                         vecix = vecix[:-1]
 
                     else:
-                        print
+                        print()
                         'nothing was removed', meani
 
                     if float(i) / Ntot >= 0.30 and i > NpointStop:
@@ -1347,7 +1348,7 @@ class StatTools:
                 SEMArr.append(semi)
                 meanArr.append(meani)
                 medianArr.append(mediani)
-                print
+                print()
                 '{0:.2f} {1:3d} {2:3d} {3:.2f} {4:3d} {5:3d}'.format(x0i + 0.5 * abs(x0i - xfi),
                                                                      len(np.where(devArr > 0)[0]),
                                                                      len(np.where(devArr < 0)[0]), meani,
@@ -1401,7 +1402,7 @@ class StatTools:
         y1, y2 = ffit(x1), ffit(x2)
         vec1 = np.array([x2 - x1, y2 - y1])
         u1 = vec1 / np.linalg.norm(vec1)
-        print
+        print()
         u1
         dataT = data_in.transpose()
         newx = np.dot(dataT, u1)
@@ -1435,7 +1436,7 @@ class StatTools:
                            (raw_data[1] < 1))[0]
 
             raw_data_use = np.array([raw_data[0][ind], raw_data[1][ind]])
-            print
+            print()
             len(raw_data_use), len(raw_data)
         dat_dim = raw_data.shape  # (Ndim x Mstars)
 
@@ -1443,7 +1444,7 @@ class StatTools:
 
         # CALCULATE N-dim MEAN VECTOR
 
-        for i in xrange(dat_dim[0]):
+        for i in range(dat_dim[0]):
             mean_arr.append([np.mean(raw_data_use[i, :])])
 
         # CALCULATE COVARIANCE MATRIX
@@ -1456,7 +1457,7 @@ class StatTools:
 
         # Make list of (eigVal and eigVec) pairs
 
-        self.eigPairs = [(np.abs(eigVal[i]), eigVec[:, i]) for i in xrange(len(eigVal))]
+        self.eigPairs = [(np.abs(eigVal[i]), eigVec[:, i]) for i in range(len(eigVal))]
 
         self.eigPairs.sort()
         self.eigPairs.reverse()
@@ -1464,7 +1465,7 @@ class StatTools:
         # CREATE TRANSFORMATION MATRIX BASED ON ORDER OF EIGENVALUES
 
         matrix_w = []
-        for i in xrange(dat_dim[0]):
+        for i in range(dat_dim[0]):
             matrix_w.append(self.eigPairs[i][1].reshape(dat_dim[0], 1))
 
         self.matrix_w = np.hstack(matrix_w)
@@ -1537,7 +1538,7 @@ class FittingTools:
             try:
                 p0 = kwargs['p0']
                 model = func(x, p0, **kwargs)
-                print
+                print()
                 "Make sure you haven't called parameters twice."
             except:
                 raise "No parameters were detected. Try again."
@@ -1587,7 +1588,7 @@ class FittingTools:
         has. It is model independent and just retrieves non-zero values for p0
         """
         p0Line = []
-        for i in xrange(lenp):
+        for i in range(lenp):
             p0Line.append(0.1)
         return p0Line
 
@@ -1599,7 +1600,7 @@ class FittingTools:
         sig = {-1: '-', 1: '+'}
         eqstr = r'$%s=' % ylabel
 
-        for i in xrange(polyn):
+        for i in range(polyn):
             if i == 0:
                 eqstr += '%s' + numformat
             elif i == 1:
@@ -1705,7 +1706,7 @@ class FittingTools:
             out_flx1 = flux1[index1]
             out_flx2 = flux2[index2]
         except IndexError:
-            print
+            print()
             'Spectra do not overlap in resample_spectrum'
         # if lam1.min()>25349:
         #
@@ -1802,9 +1803,9 @@ class FittingTools:
                     newlam.append(newsublam)
                     newflx.append(newsubflx)
 
-            maxlenArray = max(map(len, newlam))
+            maxlenArray = max(list(map(len, newlam)))
             newlam2, newflx2 = [], []
-            for k in xrange(len(newlam)):
+            for k in range(len(newlam)):
                 lamThis, flxThis = newlam[k], newflx[k]
                 difference = abs(maxlenArray - len(lamThis))
                 if difference == 0:
@@ -2721,11 +2722,11 @@ class mpfit:
 
         # Be sure that PARINFO is of the right type
         if parinfo is not None:
-            if type(parinfo) != types.ListType:
+            if type(parinfo) != list:
                 self.errmsg = 'ERROR: PARINFO must be a list of dictionaries.'
                 return
             else:
-                if type(parinfo[0]) != types.DictionaryType:
+                if type(parinfo[0]) != dict:
                     self.errmsg = 'ERROR: PARINFO must be a list of dictionaries.'
                     return
             if ((xall is not None) and (len(xall) != len(parinfo))):
@@ -3256,7 +3257,7 @@ class mpfit:
                 format=None, pformat='%.10g', dof=1):
 
         if self.debug:
-            print
+            print()
             'Entering defiter...'
         if quiet:
             return
@@ -3266,19 +3267,19 @@ class mpfit:
 
         # Determine which parameters to print
         nprint = len(x)
-        print
+        print()
         "Iter ", ('%6i' % iter), "   CHI-SQUARE = ", ('%.10g' % fnorm), " DOF = ", ('%i' % dof)
         for i in range(nprint):
-            if (parinfo is not None) and (parinfo[i].has_key('parname')):
+            if (parinfo is not None) and ('parname' in parinfo[i]):
                 p = '   ' + parinfo[i]['parname'] + ' = '
             else:
                 p = '   P' + str(i) + ' = '
-            if (parinfo is not None) and (parinfo[i].has_key('mpprint')):
+            if (parinfo is not None) and ('mpprint' in parinfo[i]):
                 iprint = parinfo[i]['mpprint']
             else:
                 iprint = 1
             if iprint:
-                print
+                print()
                 p + (pformat % x[i]) + '  '
         return 0
 
@@ -3301,7 +3302,7 @@ class mpfit:
     # Procedure to parse the parameter values in PARINFO, which is a list of dictionaries
     def parinfo(self, parinfo=None, key='a', default=None, n=0):
         if self.debug:
-            print
+            print()
             'Entering parinfo...'
         if (n == 0) and (parinfo is not None):
             n = len(parinfo)
@@ -3311,18 +3312,18 @@ class mpfit:
             return values
         values = []
         for i in range(n):
-            if (parinfo is not None) and (parinfo[i].has_key(key)):
+            if (parinfo is not None) and (key in parinfo[i]):
                 values.append(parinfo[i][key])
             else:
                 values.append(default)
 
         # Convert to numeric arrays if possible
         test = default
-        if type(default) == types.ListType:
+        if type(default) == list:
             test = default[0]
-        if isinstance(test, types.IntType):
+        if isinstance(test, int):
             values = np.asarray(values, int)
-        elif isinstance(test, types.FloatType):
+        elif isinstance(test, float):
             values = np.asarray(values, float)
         return values
 
@@ -3330,7 +3331,7 @@ class mpfit:
     # derivatives or not.
     def call(self, fcn, x, functkw, fjac=None):
         if self.debug:
-            print
+            print()
             'Entering call...'
         if self.qanytied:
             x = self.tie(x, self.ptied)
@@ -3357,7 +3358,7 @@ class mpfit:
                functkw=None, xall=None, ifree=None, dstep=None):
         #
         if self.debug:
-            print
+            print()
             'Entering fdjac2...'
         machep = self.machar.machep
         if epsfcn is None:
@@ -3382,7 +3383,7 @@ class mpfit:
             [status, fp] = self.call(fcn, xall, functkw, fjac=fjac)
 
             if len(fjac) != m * nall:
-                print
+                print()
                 'ERROR: Derivative matrix was not computed properly.'
                 return None
 
@@ -3592,7 +3593,7 @@ class mpfit:
 
     def qrfac(self, a, pivot=0):
         #
-        if self.debug: print
+        if self.debug: print()
         'Entering qrfac...'
         machep = self.machar.machep
         sz = a.shape
@@ -3752,7 +3753,7 @@ class mpfit:
 
     def qrsolv(self, r, ipvt, diag, qtb, sdiag):
         if self.debug:
-            print
+            print()
             'Entering qrsolv...'
         sz = r.shape
         m = sz[0]
@@ -3922,7 +3923,7 @@ class mpfit:
     def lmpar(self, r, ipvt, diag, qtb, delta, x, sdiag, par=None):
 
         if self.debug:
-            print
+            print()
             'Entering lmpar...'
         dwarf = self.machar.minnum
         machep = self.machar.machep
@@ -4038,7 +4039,7 @@ class mpfit:
     # Procedure to tie one parameter to another.
     def tie(self, p, ptied=None):
         if self.debug:
-            print
+            print()
             'Entering tie...'
         if ptied is None:
             return
@@ -4119,16 +4120,16 @@ class mpfit:
     def calc_covar(self, rr, ipvt=None, tol=1.e-14):
 
         if self.debug:
-            print
+            print()
             'Entering calc_covar...'
         if np.rank(rr) != 2:
-            print
+            print()
             'ERROR: r must be a two-dimensional matrix'
             return -1
         s = rr.shape
         n = s[0]
         if s[0] != s[1]:
-            print
+            print()
             'ERROR: r must be a square matrix'
             return -1
 

@@ -4,35 +4,37 @@
 #  =========================================================
 import os, sed, random
 import argparse, copy, json
-import matplotlib.pyplot as plt, numpy as np
-import matplotlib.ticker as mtick, math as ma
+import math as ma
+import numpy as np
 from scipy.optimize import bisect
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+from mpl_toolkits.axes_grid1 import Grid
+from matplotlib.ticker import MaxNLocator, MultipleLocator
+
 import mosaic_tools as mt
 from readcol import *
-from matplotlib.ticker import MaxNLocator, MultipleLocator
 import load_wfcorrection as lwf
-from mpl_toolkits.axes_grid1 import Grid
 import sed_paramfile as sp
-
 
 try:
     from astropy import constants as con
 except ImportError:
-    print 'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.'
-
+    print(
+        'Does not seem Astropy is installed, or at least the constants package is messed up. We kinda need this. Get to it yo.')
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>'
+
+
 #  =========================================================
 #     Definition to obtain Tbb assuming flux correction
 #  =========================================================
 
 
-
-
 def find_RJPoints(wavedict, photkeys):
     cutoff = 20000  # 20000.
-    keys = wavedict.keys()
-    values = wavedict.values()
+    keys = list(wavedict.keys())
+    values = list(wavedict.values())
     waveVals = list(at.dict2list(wavedict, photkeys))
     key4RJ = []
 
@@ -48,10 +50,9 @@ def find_RJPoints(wavedict, photkeys):
 
     return key4RJ
 
-    
+
 def plot_photosphere(ax, mg4d, xphot, yphot, wave,
                      PhotDust_Flux, a2m, pointsize, lw):
-
     ax.plot(xphot * a2m, yphot * xphot, 'b--', lw=lw)
     mags4Dust2 = mg4d
 
@@ -64,7 +65,7 @@ def plot_photosphere(ax, mg4d, xphot, yphot, wave,
 def plot_blackbody(ax, wave, ExcessFlux, dust_lambda, lightW4_line, a2m, ptsz, lw):
     # print Exbool_Dict
     ax.plot(dust_lambda * a2m, lightW4_line * dust_lambda, 'm-.', linewidth=lw)
-    for key, val in ExcessFlux.iteritems():
+    for key, val in list(ExcessFlux.items()):
         if Exbool_Dict[key]:
             ax.errorbar(wave[key] * a2m, val * wave[key],
                         yerr=0.7 * val * wave[key], uplims=True, ecolor='red',
@@ -78,9 +79,8 @@ def plot_blackbody(ax, wave, ExcessFlux, dust_lambda, lightW4_line, a2m, ptsz, l
 
 def plot_observedData(ax, mg4p, xphot, fullspectrum, wave,
                       flux, fluxerr, a2m, ptsze, cpsze, lw):
-
     ax.plot(xphot * a2m, fullspectrum, 'k-', lw=lw, label='Full Spectrum')
-    for band, lam in wave.iteritems():
+    for band, lam in list(wave.items()):
         flx = flux[band + '_flux']
         flxerr = fluxerr[band + '_flux'] * lam
 
@@ -200,7 +200,6 @@ _KB = con.k_B.to('erg/K')
 _RSUN = con.R_sun.to('cm')
 _LSUN = con.L_sun.to('erg/s')
 
-
 #  SET UP UNIT CONVERSION.
 _PC2CM = 3.08568025e+18
 _SOLRAD2CM = 69550000000.0
@@ -221,10 +220,9 @@ wave_min = sp.wave_min * _MICRON2ANG
 wave_max = sp.wave_max * _MICRON2ANG
 # PLOT LIMITS IN erg/s/cm^2
 ylim_up, ylim_low = sp.ylim_up, sp.ylim_low
-xmax = sp.xmax   # PLOT LIMITS IN MICRONS
+xmax = sp.xmax  # PLOT LIMITS IN MICRONS
 gridPad = 0.0  # GRID PADDING BETWEEN CELLS
 plotsize = sp.plotsize
-
 
 #  =======================================================================================
 #                                    FILES
@@ -244,7 +242,7 @@ if sp.write2file and not p_args.nw:
              '\t KcorW3 \t KcorW4 \t Log(L) \t Tstar \t Rstar \t chi2_* \t Rdust \t Tdust_calc \t fd\n'
 
     f.write('%s' % header)
-    print 'Writing to: ', os.path.basename(file_write)
+    print(('Writing to: ', os.path.basename(file_write)))
 
 else:
     pass
@@ -308,8 +306,8 @@ else:
 
 nobbFit = np.array([])
 
-print '=============================================================\n'
-print '        Fitting has begun. Enjoy the experience.\n'
+print('=============================================================\n')
+print('        Fitting has begun. Enjoy the experience.\n')
 
 plot_i = 0  # INITIALIZE PLOT CELL
 
@@ -329,7 +327,7 @@ for i, useind in enumerate(f_ind):
     #  =====================================================================================
     i = int(useind)
     star = star_arr[i]
-    print "\nFitting for %s" % star
+    print(("\nFitting for %s" % star))
     spti = stdat['spt'][i]
     g, met = stdat['grav'][i], stdat['met'][i]
     modeli = stdat['model'][i]
@@ -374,7 +372,7 @@ for i, useind in enumerate(f_ind):
             for mv in sp.Remove_RedStars:
                 try:
                     ind = np.where(eval(arr) == mv)[0]
-                    exec ('%s = np.delete(%s,ind)' % (arr, arr))
+                    exec('%s = np.delete(%s,ind)' % (arr, arr))
                 except ValueError:
                     pass
 
@@ -410,17 +408,17 @@ for i, useind in enumerate(f_ind):
     #                   Begin Stellar Photosphere Fit
     #  =====================================================================================
 
-    modeltype = (modeli,g,met)
-    mfitlist = {'photmags':mags4Phot0,
-                'scalemags':SOBJ.mags4scale}
-    rawfluxdat = (flux,fluxerr)
+    modeltype = (modeli, g, met)
+    mfitlist = {'photmags': mags4Phot0,
+                'scalemags': SOBJ.mags4scale}
+    rawfluxdat = (flux, fluxerr)
 
     fit_dat = STools.fit_photosphere(wave, rawfluxdat, p0, su2ea2,
-                           modeltype, mfitlist, STools.calc_grids)
+                                     modeltype, mfitlist, STools.calc_grids)
 
-    radius, tempnew = fit_dat[0],fit_dat[1]
+    radius, tempnew = fit_dat[0], fit_dat[1]
     p0 = [round(tempnew) / 1.e3, radius]
-    #p0 = [8840./ 1.e3, radius]
+    # p0 = [8840./ 1.e3, radius]
     #  =====================================================================================
     #                    Calculate Photosphere Line
     #  =====================================================================================
@@ -430,10 +428,7 @@ for i, useind in enumerate(f_ind):
     # convert input wavelength into angstrom
     # XPHOT: Angstrom, YPHOT: erg s^-1 cm^-2 A^-1, same with slope and yint
     xphot, yphot = STools.photosphere(p0, su2ea2, modeli,
-                                      wave=(wave_min, wave_max),gridpts=sp.gridpts)
-
-
-
+                                      wave=(wave_min, wave_max), gridpts=sp.gridpts)
 
     # **********************************************************************************
     #                   SCALE SED TO WISE FLUXES
@@ -441,7 +436,6 @@ for i, useind in enumerate(f_ind):
     # CREATE DICTIONARY OF SYNTHETIC FLUXES FROM NEW PHOTOSPHERE
     synpFlux = {}  # synthetic photospheric flux
     for band in SOBJ.mags2use:
-
         flxt = STools.rsr_flux(eval('STools.%spband' % band), xphot, yphot)[0]
         synpFlux['%s' % band] = flxt
 
@@ -453,7 +447,7 @@ for i, useind in enumerate(f_ind):
     #                   WRITES SED TO FILE
     # **********************************************************************************
     if sp.write_SED:
-        print 'Saving SED information for %s\n' % star
+        print(('Saving SED information for %s\n' % star))
         SEDWrite = os.path.join(os.getcwd(), 'DebrisDisks', star + '_SED_%i.txt' % tempnew)
         fSED = open(SEDWrite, 'w')
         fSED.write('# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom\n')
@@ -519,7 +513,7 @@ for i, useind in enumerate(f_ind):
 
             if ExFlux_tmp < 0:
                 SOBJ.mags4Dust.remove(mv)
-                print mv, 'removed from mags4Dust'
+                print((mv, 'removed from mags4Dust'))
                 svMaBool = False
             else:
                 Exbool_Dict[mv] = True  # IDENTIFY THAT IT'S A 3SIGMA UPPER LIMIT
@@ -534,7 +528,7 @@ for i, useind in enumerate(f_ind):
             ExcessFlux[mv] = ExFlux_tmp
             ExcessFluxerr[mv] = fluxerr[mv + '_flux']
             Lam_Excess[mv] = wave[mv]
-    N_Excess = np.array(ExcessFlux.values())
+    N_Excess = np.array(list(ExcessFlux.values()))
     mg4d = np.array(SOBJ.mags4Dust)
 
     #  PhotDust_Flux['W1'] = STools.rsr_flux(eval('STools.W1pband'), xphot, yphot)[0]
@@ -545,7 +539,7 @@ for i, useind in enumerate(f_ind):
         W3Excess_bool = True
 
     elif len(np.where(N_Excess > 0)[0]) == 0 or len(SOBJ.mags4Dust) == 0:
-        print 'There are no WISE mags to fit BB or no positive excess values for %s' % star
+        print(('There are no WISE mags to fit BB or no positive excess values for %s' % star))
         Nothing_bool = True
 
     elif len(SOBJ.mags4Dust) == 1 or \
@@ -553,7 +547,7 @@ for i, useind in enumerate(f_ind):
         scaleBB_bool = True  # SCALE A SINGLE TEMP BLACKBODY TO SINGLE DATA POINT
         try:
             #  mags4Dust.remove('W2')
-            print 'W2 removed from mags4Dust'
+            print('W2 removed from mags4Dust')
         except ValueError:
             pass
         sp.Exfunc = 'blackbody'
@@ -561,7 +555,7 @@ for i, useind in enumerate(f_ind):
     else:
         tmin, tmax = 10, stdat['temp'][i]
         # SORT BY WAVELENGTH INCREASING
-        sortedBands = np.array(sorted(Lam_Excess.items(), key=lambda x: x[1]))
+        sortedBands = np.array(sorted(list(Lam_Excess.items()), key=lambda x: x[1]))
         bandSorted = sortedBands[:, 0]
         lamSorted = sortedBands[:, 1].astype('float32') * _ANG2CM
         flxSorted = []
@@ -636,7 +630,7 @@ for i, useind in enumerate(f_ind):
 
         #      ========================START FIT OR SCALING ========================================
 
-    sortedBands = np.array(sorted(Lam_Excess.items(), key=lambda x: x[1]))
+    sortedBands = np.array(sorted(list(Lam_Excess.items()), key=lambda x: x[1]))
     bandSorted = sortedBands[:, 0]
     lamSorted = sortedBands[:, 1].astype('float32') * _ANG2CM
     # bandlow, bandhi = bandSorted[0],bandSorted[1]
@@ -646,7 +640,7 @@ for i, useind in enumerate(f_ind):
     PhotDust_Fluxarr = np.array(at.dict2list(PhotDust_Flux, SOBJ.mags4Dust))
     Excess_Flxerrarr = np.array(at.dict2list(fluxerr, SOBJ.mags4Dust, '_flux'))
     Excess_Flxarr = np.array(at.dict2list(ExcessFlux, SOBJ.mags4Dust))
-    print sp.Exfunc
+    print((sp.Exfunc))
 
     if fitBB_bool:  # IF THE BLACKBODY IS GOING TO BE FIT
 
@@ -654,7 +648,7 @@ for i, useind in enumerate(f_ind):
             lam0 = wave[lam0band]
         except:
             lam0 = wave['W2']  # REFERENCE WAVELENGTH USED FOR MODIFIED BLACKBODY
-        print 'lam0=W2'
+        print('lam0=W2')
 
         lamMin = min(Lam_Excess.values())
         tempdust = STools.wienTEMP(lamMin, units='angstrom')
@@ -696,7 +690,7 @@ for i, useind in enumerate(f_ind):
             parinfo_dust[1]['relstep'] = 0.1
 
         else:
-            print 'Specify function to fit to data for Excess emission'
+            print('Specify function to fit to data for Excess emission')
             sys.exit()
 
         m_dust = mt.mpfit(ft.deviates_from_model, parinfo=parinfo_dust, functkw=fa_Dust,
@@ -718,11 +712,11 @@ for i, useind in enumerate(f_ind):
         flxArrErr = np.array([ExcessFluxerr[bandlow], ExcessFluxerr[bandhi]])
 
         res, FluxNormed, alpha = STools.calc_temp(flxArr, flxArrErr, SOBJ.mags4Dust,
-                                           lwf.wfc.tempArr, lwf.wfc.kw_cor)
+                                                  lwf.wfc.tempArr, lwf.wfc.kw_cor)
         chi2Dust = np.sum((res / flxArrErr) ** 2, axis=1)
         tempnew_dust = lwf.wfc.tempArr[np.where(chi2Dust.min() == chi2Dust)[0][0]]  # FIND NEW TEMPERATURES
 
-        for bd in ExcessFlux.keys():
+        for bd in list(ExcessFlux.keys()):
             kcor = 10 ** lwf.wfc.kw_cor['IP_fc%s' % bd](ma.log10(tempnew_dust))
             freal = ExcessFlux[bd] / kcor
             ExcessFlux[bd] = freal
@@ -747,7 +741,7 @@ for i, useind in enumerate(f_ind):
                - 5.
         p0_dust = np.array([tempnew_dust, 1])
 
-        print 'beta = %.3f' % beta
+        print(('beta = %.3f' % beta))
 
     elif scaleBB_bool:  # IF ONLY SCALING TO A BB -- single flux point
         lamMin = max(Lam_Excess.values())
@@ -773,24 +767,24 @@ for i, useind in enumerate(f_ind):
         Rad_dust = 1
         tempnew_dust = 1
         p0_dust = np.array([tempnew_dust, 0])
-        print 'Not Drawing BB for %s' % star
+        print(('Not Drawing BB for %s' % star))
 
     elif Nothing_bool:
         FluxNorm_dust = -1
         Rad_dust = 1
         tempnew_dust = -1
         p0_dust = np.array([tempnew_dust, 0, 0])
-        print 'No Excess --> %s' % star
+        print(('No Excess --> %s' % star))
 
     else:
-        print 'Something went wrong with %s' % star
+        print(('Something went wrong with %s' % star))
 
     # =====================================================================================
     #                 CALCULATE & SET UP LINES TO PLOT
     #  =====================================================================================
     norm_star = (radius) ** 2 * su2ea2
     Lbol_star = (4 * ma.pi * (radius * _RSUN) ** 2) * np.trapz((yphot / _ANG2CM) / norm_star,
-                                                                   xphot * _ANG2CM)
+                                                               xphot * _ANG2CM)
     if not dontdraw_bool:
         if W3Excess_bool:
             lightW4_line = STools.modifiedBB(dust_lambda, p0_dust, su2ea_dust, lam0=lam0, beta=beta)
@@ -860,10 +854,10 @@ for i, useind in enumerate(f_ind):
         w4f_cgs, w4fe_cgs = flux['W4_flux'], fluxerr['W4_flux']
         w4f_mjy, w4fe_mjy = STools.cgs2Jy(nu=STools.W4pband.isoFrequency(),
                                           wave=STools.W4pband.isoWavelength(),
-                                          flux=w4f_cgs),\
-                            STools.cgs2Jy(nu=STools.W4pband.isoFrequency(),
-                                          wave=STools.W4pband.isoWavelength(),
-                                          flux=w4fe_cgs)
+                                          flux=w4f_cgs), \
+            STools.cgs2Jy(nu=STools.W4pband.isoFrequency(),
+                          wave=STools.W4pband.isoWavelength(),
+                          flux=w4fe_cgs)
         exw4corr_cgs = (w4f_cgs - w4phot_cgs) / kcor_w4
         exw4corr_mjy = (w4f_mjy - w4phot_mjy) / kcor_w4
         W4excessfraction = (w4f_cgs - w4phot_cgs) / w4f_cgs
@@ -888,9 +882,9 @@ for i, useind in enumerate(f_ind):
         w3f_mjy, w3fe_mjy = STools.cgs2Jy(nu=STools.W3pband.isoFrequency(),
                                           wave=STools.W3pband.isoWavelength(),
                                           flux=w3f_cgs), \
-                            STools.cgs2Jy(nu=STools.W3pband.isoFrequency(),
-                                          wave=STools.W3pband.isoWavelength(),
-                                          flux=w3fe_cgs)
+            STools.cgs2Jy(nu=STools.W3pband.isoFrequency(),
+                          wave=STools.W3pband.isoWavelength(),
+                          flux=w3fe_cgs)
         exw3corr_cgs = (w3f_cgs - w3phot_cgs) / kcor_w3
         exw3corr_mjy = (w3f_mjy - w3phot_mjy) / kcor_w3
         W3excessfraction = (w3f_cgs - w3phot_cgs) / w3f_cgs
@@ -923,7 +917,7 @@ for i, useind in enumerate(f_ind):
                            ma.log10(Lbol_star / _LSUN), tempnew, radius, chi2, radius_dust, tempnew_dust, tau))
 
         try:
-            print 'beta= ', p0_dust[2]
+            print(('beta= ', p0_dust[2]))
         except:
             pass
     else:
@@ -933,8 +927,6 @@ for i, useind in enumerate(f_ind):
     #                  PLOTTING
     #  =====================================================================================
     # PUT INTO ARRAY
-
-
 
     if sp.plot_any:
         fluxy = at.dict2list(flux, SOBJ.mags2use, '_flux')  # flux in erg s-1, cm-2 A-1
@@ -1019,13 +1011,13 @@ for i, useind in enumerate(f_ind):
 
             xi, yi = xphot, fullspectrum
             plot_observedData(ax, SOBJ.mags4Phot, xi, yi, wave,
-                              flux, fluxerr,_ANG2MICRON, ptsize, cps, 1)
+                              flux, fluxerr, _ANG2MICRON, ptsize, cps, 1)
 
             #  ==============================================================================================
             #  plot_annotations(ax, star,spti,tempnew, tempnew_dust,beta,
             #                   p0_dust, W3Excess_bool,sp.Exfunc, ftsize, minorftsize)
-            plot_annotationsW2(ax, star, spti, tempnew, tempnew_dust,beta,
-                               p0_dust, W3Excess_bool, sp.Exfunc, ftsize,minorftsize)
+            plot_annotationsW2(ax, star, spti, tempnew, tempnew_dust, beta,
+                               p0_dust, W3Excess_bool, sp.Exfunc, ftsize, minorftsize)
             if not p_args.noshow:
                 plt.show()
 
@@ -1038,7 +1030,7 @@ for i, useind in enumerate(f_ind):
             cps = 11
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            print 'Plotting for %s' % star
+            print(('Plotting for %s' % star))
             fig.set_size_inches(9.5, 7.5)
             ax.set_xlim([.2, xmax])
             ax.set_ylim([10 ** -14.5, ylim_up])
@@ -1108,6 +1100,6 @@ for i, useind in enumerate(f_ind):
 
 if sp.write2file and not p_args.nw:
     f.close()
-    print 'Data Written to: ', os.path.basename(file_write)
+    print(('Data Written to: ', os.path.basename(file_write)))
 else:
     pass

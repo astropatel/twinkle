@@ -18,7 +18,7 @@
   7. Change init to only load pband files from mags2use.
   8. Calc_temp needs better docstring
 """
-from __future__ import print_function
+
 
 import os, re, sys, operator
 import glob, string
@@ -89,16 +89,12 @@ class SEDTools:
          to create your own passband object. Above rules apply.
          Wavelength is automatically converted to Angstroms.
 
-         Parameters:
-         -----------
-         RSRFile : str
-            File name that contains the RSR information
-         flat : bool
-            When set True, will let you create a flat spectrum
-         waverange : tuple
-            2 float elements. These need to be initiated to the
-                    min and max wave of the flat spectrum
-         cntr: center or isophotal wavelength of the flat bandpass.
+         Args:
+            RSRFile (str): File name that contains the RSR information
+         flat (bool) : When set True, will let you create a flat spectrum
+         waverange (tuple): 2 float elements. These need to be initiated to the
+            min and max wave of the flat spectrum
+         cntr (float): center or isophotal wavelength of the flat bandpass.
          """
 
         units = {'WISE': 'microns', '2MASS': 'microns', 'Johnson': 'angstroms',
@@ -190,18 +186,17 @@ class SEDTools:
             self.pband = Flatbandpass(waverange, cntr)
 
     def cgs2Jy(self, flux, dflux, band=None, wave=None, nu=None):
-        """To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
+        """
+        To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
         input wavelength is in Angstroms
 
-        Parameters:
-        -----------
-        nu (flt/array): frequency in Hz to convert to Jansky.
-        wave (flt/array): wavelength in Angstroms
-        flux (flt/array): flux in erg/s/cm2/Ang
+        Args:
+            nu (array): frequency in Hz to convert to Jansky.
+            wave (array): wavelength in Angstroms
+            flux (array): flux in erg/s/cm2/Ang
 
-        Return:
-        --------
-        flux density in Jansky(ies).
+        Returns:
+            flux density in Janskies.
         """
         _CS = con.c.to('angstrom/s').value
 
@@ -230,16 +225,15 @@ class SEDTools:
 
     def mag2Jy(self, band, mag, magerr):
         """
+        Convert magnitudes to Janskies
 
-        Parameters
-        ----------
-        band : (str) any of the band designations in "create_passbands"
-        mag : (float) photometric measurement in vega mags
-        magerr : (float) associated uncertainty
+        Args:
+            band (str): any of the band designations in "create_passbands"
+            mag (float): photometric measurement in vega mags
+            magerr (float): associated mag uncertainty
 
-        Returns
-        -------
-        fjy, efjy : (float, float) flux and uncertainty in Jansky.
+        Returns:
+            fjy, efjy : (float, float) flux and uncertainty in Jansky.
 
         """
 
@@ -1672,7 +1666,7 @@ class GridModels:
                 elements = fread.strip()
                 elements2 = elements.split(' ')
 
-                fstrip = map(string.strip, elements2)
+                fstrip = list(map(string.strip, elements2))
                 datarr = np.array(fstrip)
                 ind = np.where(datarr == '')[0]
                 dat = np.delete(datarr, ind)

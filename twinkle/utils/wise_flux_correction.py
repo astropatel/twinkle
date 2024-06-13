@@ -53,7 +53,7 @@ class WISECorrect:
         self.tarr,self.flxarr,self.wavearr = self.blackbody_spectrums(self.tempArr)
         self.kw_cor = {}
         for bd in bands:
-            print bd
+            print(bd)
             bd_wave = eval('self.STools.%spband.isoWavelength()'%bd)
             vflux_bd = self.FindModelFlux(bd_wave,self.VegaModel)
             fluxUnSc_bd,fluxScaled_bd = self.blackbody_fluxes(self.tarr,self.wavearr,self.flxarr,bd)# convolved flux at band bd, and flux evaluated at isoBand wavelength for scaled blackbody to the
@@ -161,7 +161,7 @@ class WISECorrect:
 
         if np.isscalar(tempArr):
             tempArr = np.array([tempArr])
-        for i in xrange(len(tempArr)):
+        for i in range(len(tempArr)):
             p0 = np.array([tempArr[i]])
             flux = self.STools.blackbody(xwave,p0)#band integrated flux
             waveArr.append(xwave)
@@ -174,7 +174,7 @@ class WISECorrect:
         """Gives you Real and Convolved (shifted/uncorrected) fluxes for blackbodiees at
         tempearatures in tempArr using Raw Surface fluxes in fluxArr"""
         
-        print 'start bbflux stuff'
+        print('start bbflux stuff')
         fluxScaled = []
         fluxUnscaled = []
         #fluxConvolved = []
@@ -188,7 +188,7 @@ class WISECorrect:
         bandWave = pband.isoWavelength()
 
 
-        for i in xrange(len(tempArr)):
+        for i in range(len(tempArr)):
             wavei = waveArr[i]
             fluxi = fluxArr[i]#blackbody spectrum at temperature tempArr[i]
 
@@ -201,7 +201,7 @@ class WISECorrect:
 
             fluxScaled.append(fluxScaledi)
             fluxUnscaled.append(fluxUnSc)
-        print 'end bbflux stuff'
+        print('end bbflux stuff')
         return np.array(fluxUnscaled), np.array(fluxScaled)
 
     def calc_CorrectedBlackbody(self,wave, p0,kw=None,scale=1):

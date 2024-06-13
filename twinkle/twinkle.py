@@ -8,7 +8,7 @@ Issues and changes that need to be made:
  5. Have code use more than Bt-Vt to interpolate mamajek's file
 
 """
-from __future__ import print_function
+
 import os
 import copy
 import json
@@ -372,8 +372,8 @@ class Star:
                     try:
                         freq = eval('STools.{}pband.isoFrequency()'.format(mv))
                     except UnboundLocalError:
-                        print('Iso Freq. for {} will be calculated using'
-                              ' iso wavelength.'.format(mv))
+                        print(('Iso Freq. for {} will be calculated using'
+                              ' iso wavelength.'.format(mv)))
                         freq = None
 
                     # WHEN THERE IS A NULL VALUE
@@ -447,10 +447,10 @@ class Star:
 
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
-        mags2use0 = map(lambda s: s.replace('_flux', ''), mags2use0)
-        mags4Dust0 = map(lambda s: s.replace('_flux', ''), mags4Dust0)
-        mags4Phot0 = map(lambda s: s.replace('_flux', ''), mags4Phot0)
-        mags4scale0 = map(lambda s: s.replace('_flux', ''), mags4scale0)
+        mags2use0 = [s.replace('_flux', '') for s in mags2use0]
+        mags4Dust0 = [s.replace('_flux', '') for s in mags4Dust0]
+        mags4Phot0 = [s.replace('_flux', '') for s in mags4Phot0]
+        mags4scale0 = [s.replace('_flux', '') for s in mags4scale0]
 
         if specs['satcheck']:
             self.mags2use = self.keep_unsatmags(vegaMagDict_temp, mags2use0)
@@ -493,15 +493,15 @@ class Star:
         # CALCULATE EXCESS FLUX AND ADD TO TAUA
         for band in self.mags4Dust:
             exflux = self.flux[band + '_flux'] - self.photFlux[band]
-            print(band, ' excess flux ', exflux, 'erg/s/cm2/ang')
+            print((band, ' excess flux ', exflux, 'erg/s/cm2/ang'))
             self.excessFlux[band + '_flux'] = exflux
             self.excessFlux_wave[band] = self.wave[band]
             self.excessFlux_e[band + '_flux'] = self.fluxerr[band + '_flux']
 
-        self.fluxEx = np.array(zip(*sorted(self.excessFlux.items()))[1])
-        magsorder, self.waveEx = np.array(zip(*sorted(self.excessFlux_wave.items())))
+        self.fluxEx = np.array(list(zip(*sorted(self.excessFlux.items())))[1])
+        magsorder, self.waveEx = np.array(list(zip(*sorted(self.excessFlux_wave.items()))))
         self.waveEx = self.waveEx.astype('float64')
-        self.efluxEx = np.array(zip(*sorted(self.excessFlux_e.items()))[1])
+        self.efluxEx = np.array(list(zip(*sorted(self.excessFlux_e.items())))[1])
 
     def keep_unsatmags(self, vegaDict, magsCheck):
         """
@@ -765,7 +765,7 @@ class Star:
         ax.plot(xlam * _ANG2MICRON, ylam * xlam, color=lcolor,
                 ls=linestyle, lw=lw, **kwargs)
 
-        for band, lam in self.wave.iteritems():
+        for band, lam in list(self.wave.items()):
             flx = self.flux[band + '_flux']
             flxerr = self.fluxerr[band + '_flux']
 

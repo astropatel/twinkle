@@ -1,0 +1,68 @@
+##########################################################################################################
+%%%%%%%%%%%%%%%                        Input Star File                         %%%%%%%%%%%%%%%%%%%%%%%%%%%
+##########################################################################################################
+
+These are the column headers that need to be included in the input file under "files">"stinfo_file" in the 
+input JSON file. The column strings should not have the asterisks. If the "*" 'd columns are not included, 
+then the **'d columns in the "optional" are required. If the *** columns are included, then "changekeys" 
+in the JSON file must be set to "true" for these columns to be used.
+
+
+All the columns [band]m, [band]me, [band]_flux, [band]_fluxe are the formats to use to include spectral data.
+If the data is photometric, use [band]m, and [band]me, and the other two for fluxes in Jy. 
+
+The band options are listed below in the "available_filters.txt" file
+
+    =================================================================
+    %%%%%%%%%%%%%%%        Required:      %%%%%%%%%%%%%%%%%%%%%%%%%%%
+    =================================================================
+
+    Column headers            Data Type          Description.
+    ---------------           ----------        ------------------------------
+    MainName                   (str)             star name [no spaces]
+    spt                        (str)             spectral type
+    NoOptical                  (bool)            Use optical photometry to fit SED.
+    model                      (str)             Model to use (NextGen or ATLAS9)
+    temp*                      (float)           Guess temperature for star.
+    grav*                      (float)           log(g). Right now quantized: [e.g., 35, 40, 45, 50, etc.]
+    met                        (float)           metallicity. Right now, set to solar.
+    plx                        (float)           parallax [mas]
+    e_Plx                      (float)           uncertainty in parallax [mas]
+    [band]                     (float)           [band] mag
+    [band]e                    (float)           [band] mag unc.
+    [band]_flux                (float)           flux for [band] (Jy)
+    [band]_fluxe               (float)           flux unc. for [band] (Jy)
+    BJm                        (float)           Johnson B mag
+    BJme                       (float)           Johnson B mag unc.
+    VJm                        (float)           Johnson V mag
+    VJme                       (float)           Johnson V mag unc.    
+
+    =================================================================
+    %%%%%%%%%%%%%%%        Optional:      %%%%%%%%%%%%%%%%%%%%%%%%%%%
+    =================================================================
+
+    Except for the ***'d columns, 
+
+    Column headers            Data Type          Description.
+    ---------------           ----------        ------------------------------
+    OtherName                  (str)             alternative star identifier
+    sptViz                     (str)             Vizier listed spectral type
+    SPT2HIP                    (str)             Hipparcos listed spectral type
+    Otype                      (str)             Star type
+    w3mC                       (float)           WISE band 3 mag saturated corrected mag
+    w3meC                      (float)           WISE band 3 mag saturated corrected mag unc.
+    ESNR                       (float)           Excess SNR
+    OtherFlux                  (float)           OtherFlux to add
+    W2mC ***                   (float)           WISE band 2 mag saturated corrected mag
+    W2meC ***                  (float)           WISE band 2 mag saturated corrected mag unc.
+    W1mC  ***                  (float)           WISE band 1 mag saturated corrected mag
+    W1meC ***                  (float)           WISE band 1 mag saturated corrected mag unc.
+    BT-VT                      (float)           tycho color
+    e_BT-VT                    (float)           tycho color uncertainty
+    
+    
+    
+ ===============================================================================================================    
+
+
+For the moment, one must include the Johnson B and V photometry and uncertainties (BJm, BJme, VJm, VJme)
