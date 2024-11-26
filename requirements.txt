@@ -6,3 +6,4 @@ matplotlib
 sphinxcontrib-exceltable
 sphinxcontrib.xlsxtable
 nbsphinx
+sphinx_rtd_theme
