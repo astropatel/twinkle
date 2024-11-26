@@ -25,7 +25,8 @@ python:
     - requirements: requirements.txt
 
 # Output formats
-formats:
-  - html
-  - pdf
-  - epub
+#formats:
+#  htmlzip: true
+#  pdf: true
+#  epub: true
+
