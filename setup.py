@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='twinkle',
-    version='1.0.0',
+    # version='1.0.0',
     description='A custom package for calculating stellar spectral energy distributions (SED) using broadband fluxes and grid models. Also has the capability to calculate excess flux.',
     author='Rahul I. Patel',
     url='https://github.com/astropatel/twinkle',
