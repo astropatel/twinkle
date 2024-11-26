@@ -186,7 +186,7 @@ You need to make sure that ``folders``/``topdir`` points to where the folder is 
     <pre style="font-size:70%;">
     <span style="color: red;">['folders']['topdir']</span>
         ├── Twinkle Tutorial.ipynb
-        ├── sed_paramfile.json
+        ├── paramfile.json
         ├── <span style="color: red;">['folders']['supportdir']</span>
         │   ├── <span style="color: blue;">['files']['bv_colorfile']</span>
         │   ├── <span style="color: lightcoral;">StellarInputFiles/</span>
@@ -265,7 +265,7 @@ Sure. You could ask that.
     <pre style="font-size:70%;">
     <span style="color: red;">twinkle-master</span>
         ├── Twinkle Tutorial.ipynb
-        ├── sed_paramfile.json
+        ├── paramfile.json
         ├── <span style="color: red;">Inputs_and_Models/</span>
         │   ├── <span style="color: blue;">EMamajek_MSColors.txt</span>
         │   ├── <span style="color: lightcoral;">StellarInputFiles/</span>

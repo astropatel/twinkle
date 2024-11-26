@@ -30,7 +30,7 @@ Available Features
 
 - Plotting capabilities (link to plotting page upcoming) of the empirical data, and the modeled distribution.
 
-- Look at the Jupyter Notebook to see how it can be used (XXX write this out properly)
+- This `Jupyter Notebook <https://github.com/astropatel/twinkle/blob/master/Twinkle_Tutorial.ipynb>` will give you a quick-start on using `Twinkle`.
 
 
 .. note:: The code hasn't been tested in a while so there will probably be issues with it that are still being worked on. If you want to contribute, fork and pull-request things up.
