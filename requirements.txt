@@ -1,10 +1,5 @@
-json
-glob
 numpy
 pandas
 astropy
 scipy
-random
-functools
-logging
 matplotlib
