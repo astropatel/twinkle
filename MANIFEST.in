@@ -10,3 +10,4 @@ exclude Twinkle_Tutorial.ipynb
 exclude new_function_testing.ipynb
 exclude deprecated/*
 exclude sed_paramfile.json
+exclude .readthedocs.yaml

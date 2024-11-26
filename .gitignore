@@ -13,7 +13,7 @@ tree_structure*.txt
 # RSR FILES TO EXCLUDE
 *.xls
 
-.DS_Store
+**/.DS_Store
 
 ### Python template
 # Byte-compiled / optimized / DLL files

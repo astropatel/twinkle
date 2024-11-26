@@ -1,0 +1,31 @@
+# Read the Docs configuration file for Sphinx projects
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+version: 2
+
+# Set the OS, Python version, and other tools
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.12"
+
+# Build documentation in the "docs/" directory with Sphinx
+sphinx:
+  configuration: docs/source/conf.py
+  # Uncomment to use a different builder, e.g., "dirhtml"
+  # builder: "dirhtml"
+  # Uncomment to fail on all warnings
+  # fail_on_warning: true
+
+# Python dependencies
+python:
+  install:
+    - method: pip
+      path: .
+    - requirements: requirements.txt
+
+# Output formats
+formats:
+  - html
+  - pdf
+  - epub
