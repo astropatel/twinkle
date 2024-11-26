@@ -3,3 +3,4 @@ pandas
 astropy
 scipy
 matplotlib
+sphinxcontrib-exceltable
