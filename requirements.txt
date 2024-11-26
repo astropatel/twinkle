@@ -4,3 +4,4 @@ astropy
 scipy
 matplotlib
 sphinxcontrib-exceltable
+sphinxcontrib.xlsxtable
