@@ -1,5 +1,14 @@
 # ignore spectra
-/SupportFiles/Models/NextGen/Spectra/
+/Inputs_and_Models/StellarGridModels/NextGen/Spectra/*
+
+# don't ignore
+!/Inputs_and_Models/StellarGridModels/NextGen/Spectra/Z-0.0
+!/Inputs_and_Models/StellarGridModels/NextGen/Spectra/Z-0.5
+
+new_function_testing.ipynb
+
+Backronyms.txt
+tree_structure*.txt
 
 # RSR FILES TO EXCLUDE
 *.xls
@@ -53,8 +62,6 @@ coverage.xml
 *,cover
 .hypothesis/
 
-# Sphinx documentation
-docs/_build/
 
 # PyBuilder
 target/

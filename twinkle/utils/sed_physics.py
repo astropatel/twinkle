@@ -1,25 +1,16 @@
-
-
-import os, re, sys, operator
-import glob, string
+import os
 import numpy as np
 
-from utils import directories
-from utils import mosaic_tools as mt
-import scipy.interpolate as intp
-import scipy.integrate as sintp
+# from utils import directories
+# from utils import mosaic_tools as mt
+#
+# from astropy.io import ascii
+# from astropy.io import fits
+from astropy import constants as con
 
-try:
-    from astropy.io import ascii
-    from astropy.io import fits
-    from astropy import constants as con
-    import astropy.units as u
-except ImportError:
-    print('Ummmm... Astropy doesnt seem to be installed. Well, that sucks for you.')
+# import astropy.units as u
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>, Joe Trollo'
-
-
 
 opj = os.path.join
 # SET UP CONSTANTS
@@ -31,6 +22,9 @@ _KB = con.k_B.to('erg/K').value
 # SET UP UNIT CONVERSION.
 _CM2ANG = 100000000.0
 _ANG2CM = 1e-8
+units_factor = {'angstrom': 1e-8, 'microns': 1e-4,
+                'meters': 1e-2, 'cm': 1}
+
 
 class PhysModels:
 
@@ -41,11 +35,11 @@ class PhysModels:
 
         Parameters:
         -----------
-        lambda_: (float or np.array) reference wavelength(s) to calculate
-                                    blackbody temperature
+        lambda_: (float or numpy array) reference wavelength(s) to calculate
+         blackbody temperature
         units: (string) describes reference wavelength unit. All values in lambda_
-            have to be the same. Allowed units are 'angstrom','microns','cm'
-            'meters'. Units will be converted to cm for ease of calculation.
+          have to be the same. Allowed units are 'angstrom','microns','cm', 'meters'.
+          Units will be converted to cm for ease of calculation.
 
         Returns:
         --------
@@ -53,18 +47,13 @@ class PhysModels:
         """
         # CHECK UNITS
         x = lambda_
-        if units == 'angstrom':
-            x *= 1e-8
-        elif units == 'microns':
-            x *= 1e-4
-        elif units == 'meters':
-            x *= 1e-2
-        elif units == 'cm':
-            x = x
-        else:
+        try:
+            x *= units_factor[units]
+        except ValueError:
             raise ValueError('Unit was not recognized')
-        Temp = _WIEN / x
-        return Temp
+        temp = _WIEN / x
+
+        return temp
 
     def blackbody(self, lambda_, p0, su2ea1=1, bands=None,
                   units='angstrom', bulk=False, **kwargs):
@@ -143,5 +132,3 @@ class PhysModels:
         else:
             flux_arr = fluxbb / (x * _CM2ANG)
         return flux_arr
-
-

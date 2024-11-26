@@ -17,11 +17,11 @@ import scipy
 
 import random as rnd
 import scipy.linalg.blas
-import types, pdb, operator
+import operator
 import numpy as np, math as ma
 import matplotlib.pyplot as plt
 import scipy.interpolate as intp
-import scipy.optimize as opt
+# import scipy.optimize as opt
 from matplotlib.colors import LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from functools import reduce
@@ -32,18 +32,15 @@ try:
 except ImportError:
     print('Astropy not detected/installed')
 
-try:
-    from readcol import *
-except ImportError:
-    print('Readcol not detected/installed')
-
 
 class PlottingTools:
     def triple_axes_dist(ylog=False, xlog=False, xlabel='x', ylabel='y'):
-        """Sets up plots with 3 axes -- one in center, one on right and one above center
+        """
+        Sets up plots with 3 axes -- one in center, one on right and one above center
             plot. The purpose is to have a scatter plot or w/e in the center, and two
             distribution plots of the x and y parameters in the side plots.
-            Input:
+
+        Args:
             axScatter: axis object for center scatter plot
             ylog, xlog: booleans to indicate whether x and y axes of center plot are in
                         log scale (base 10)
@@ -627,7 +624,12 @@ class ReadWrite_Tools:
 
         import collections
         import os
+        try:
+            from readcol import readcol
+        except ImportError:
+            print('Readcol not detected/installed')
 
+        # todo: remove readcol
         names, data = readcol(file, names=True)
         ##create dictionary with index and column names as val and keys
         ##and vice versa
@@ -1498,29 +1500,26 @@ class StatTools:
 
 class FittingTools:
     """
-    ==================================================================
     Fitting aids
-    =================================================================
     """
 
     def deviates_from_model(self, p0=None, fjac=True, x=None, y=None, err=None,
                             func=None, logx=None, logy=None, loglog=None, **kwargs):
-        """Returns deviates calculated from input model function.
-            This is to be used by "mpfit.py" Levenberg-Marquardt technique;
-            same IDL code written for Python by Mark Rivers and Sergey
-            Koposov.
+        """
+        Returns deviates calculated from input model function.
+        This is to be used by "mpfit.py" Levenberg-Marquardt technique;
+        same IDL code written for Python by Mark Rivers and Sergey
+        Koposov.
 
-            Parameters:
-            -----------
-            p0: (list) parameters to be fit
+        Args:
+            p0 (list) parameters to be fit
             fjac: partial derivate calculation flag. See MPFIT.py
             x,y,err: (numpy arr) observational data
             func: (object) full name of function that will be called to
                   execute model calculations.
             kwargs: additional items to be passed to model function.
 
-            Return:
-            --------
+        Returns:
             [status,residuals] : list
             status: (int) status of fit, used by mpfit.py module
             residuals: (np.ndarray) Either weighted or unweighted
@@ -4122,7 +4121,7 @@ class mpfit:
         if self.debug:
             print()
             'Entering calc_covar...'
-        if np.rank(rr) != 2:
+        if rr.ndim != 2:
             print()
             'ERROR: r must be a two-dimensional matrix'
             return -1

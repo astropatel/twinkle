@@ -1,0 +1,12 @@
+# Include Python code and necessary files
+include LICENSE
+include README.md
+include requirements.txt
+
+# Do not include non-Python files in the pip install
+exclude docs/*
+exclude Inputs_and_Models/*
+exclude Twinkle_Tutorial.ipynb
+exclude new_function_testing.ipynb
+exclude deprecated/*
+exclude sed_paramfile.json

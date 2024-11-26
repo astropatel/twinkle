@@ -1,0 +1,21 @@
+.literal-block{
+    max-height: 400px;
+    overflow-y: scroll;
+}
+
+
+.small-table {
+    width: 100%; /* Adjust width as needed */
+    font-size: 0.1em; /* Optional: reduce font size */
+}
+
+
+table.xlsxtable td {
+    white-space: normal; /* Enables text wrapping in cells */
+    word-wrap: break-word;
+}
+
+
+.toctree-wrapper .caption, .toctree-wrapper ul {
+    display: none !important;
+}

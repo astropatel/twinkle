@@ -3,38 +3,27 @@
     twinkle.py by Rahul I. Patel (ri.patel272@gmail.com)
 ***********************************************************************
 Issues and changes that need to be made:
- 2. Add attributes description to doc string
- 3. Fix plot functions to use kwargs
- 5. Have code use more than Bt-Vt to interpolate mamajek's file
-
+ 2. #todo Add attributes description to doc string
+ 3. #todo Fix plot functions to use kwargs
+ 5. #todo Have code use more than Bt-Vt to interpolate mamajek's file
+ 6. #todo change user input file from txt to excel
+ 7. #todo put user input load function outside of twinkle
 """
 
 import os
 import copy
-import json
 import logging
-#from logging.handlers import RotatingFileHandler
 import numpy as np
-
+import matplotlib.pyplot as plt
 from . import sed
-
+# from twinkle import sed
+from astropy import constants as con
 
 logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
 
-try:
-    from astropy import constants as con
-except ImportError:
-    print('Does not seem Astropy is installed, or at least the constants '
-          'package is messed up. We kinda need this. Get to it yo.')
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    print('Matplotlib doesnt seem to be installed detected.')
-    print('Fine by me, but now you cant use the awesome'
-          'plotting function we have. Sucks for you.')
-
 STools = sed.SEDTools()
+
+DataStuff = None
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>, Joe Trollo'
 
@@ -58,6 +47,42 @@ CONST_2 = _AU2CM ** 2 / (4 * np.pi * _PC2CM ** 2)
 
 Photometry_spCheckList = ['mags2use0', 'mags4Phot0', 'mags4scale0']
 
+# PLOTTING LABELS
+
+y_flux_label = r'$\lambda F_{\lambda}\ [erg\,\ s^{-1}\ cm^{-2}] $'
+x_wav_label_microns = r'$\lambda\ [\mu m]$'
+
+class Fuel:
+    """
+    This should be called before all others.
+    Initialization process loads the input script file, uploads
+        and saves the data of the input star file, empirical color
+        file, photospheric grid models and is accessible through sed.py
+        global variables
+    """
+
+    def __init__(self, jfile):
+        """
+        Loads the user input parameter file data
+
+        Parameters
+        ----------
+        jfile: (str) json file of inputs
+        """
+        #  Load data from starfile
+        #  Load data from empirical color file
+        global DataStuff
+        if not os.path.isfile(jfile):
+            raise ValueError(f'{jfile} is not a file.')
+        # CHECK TO SEE IF DICTIONARY OF STELLAR DATA HAS BEEN POPULATED
+        if not sed.StarsDat:
+            # THIS RUNS THE ENTIRE PROCESS OF LOADING AND SAVING THE
+            # EMPIRICAL DATA
+            try:
+                DataStuff = sed.DataLogistics(jfile)
+            except ValueError as Err:
+                logging.info(f'JSON is trippin cause of, {Err}', )
+                raise ValueError(Err)
 
 class Star:
     """
@@ -76,13 +101,12 @@ class Star:
 
     """
 
-    def __init__(self, jfile, sid=None, starname=None):
+    def __init__(self, sid=None, starname=None):
         """
         Instantiates a "twinkling star" object (funny, I know).
 
         Parameters
         ----------
-        jfile: (str) json file of inputs
         sid: (int) index in reference to star in stellar file
         starname: (str) Name of star in MainName column of stellar file
                     Providing both sid and starname will halt execution.
@@ -90,22 +114,6 @@ class Star:
 
         self.sid = sid
         self.starname = starname
-
-        #  Load data from starfile
-        #  Load data from empirical color file
-        if not os.path.isfile(jfile):
-            raise ValueError('%s aint a file yo' % jfile)
-        try:
-            script = open(jfile).read()
-            specs = json.loads(script)
-        except ValueError as Err:
-            logging.info('JSON is trippin cause of, ', Err)
-            raise ValueError(Err)
-
-        # CHECK TO SEE IF DICTIONARY OF STELLAR DATA HAS BEEN POPULATED
-        if not sed.StarsDat:
-            # THIS RUNS THE ENTIRE PROCESS OF LOADING AND SAVING THE EMPIRICAL DATA
-            sed.DataLogistics(specs)
 
         self.starsdat = sed.StarsDat
         self.emdat = sed.EmpDat['dat']
@@ -137,12 +145,10 @@ class Star:
         if self.sid is None and self.starname is not None:
             ind = np.where(self.starsdat['MainName'] == self.starname)[0]
             if len(ind) == 0:
-                raise ValueError("%s was not found in the input file"
-                                 % self.starname)
+                raise ValueError(f"{self.starname} was not found in the input file")
             else:
                 self.sid = ind[0]
-                self.starname = \
-                    self.starsdat['MainName'][self.sid]
+                self.starname = self.starsdat['MainName'][self.sid]
 
         elif self.sid is None and self.starname is None:
             raise ValueError('No object index or ID was provided')
@@ -154,22 +160,20 @@ class Star:
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
         # vegaMagDict and errdict ARE FILLED UP HERE.
-        self.cleanphotometry(specs)
-
+        self.cleanphotometry(DataStuff.specs)
+        specs = DataStuff.specs
         #  ========================================
         #  Gather up basic stellar info from file
         #  ========================================
         self.disti = 1000. / self.starsdat['plx'][self.sid]
         self.spti = self.starsdat['spt'][self.sid]
-        self.met = 0
+        self.met = self.starsdat['met'][self.sid]
         self.modeli = self.starsdat['model'][self.sid]
 
         self.su2ea = CONST_1 / self.disti ** 2
         self.su2ea_dust = CONST_2 / self.disti ** 2
 
         #  Obtain grav and met from file or guess based on B-V
-        # import pdb
-        # pdb.set_trace()
         self.g = self.starsdat['grav'][self.sid]
         self.T0 = self.starsdat['temp'][self.sid] / 1000.
         bv = self.emdat['B-V']
@@ -207,8 +211,8 @@ class Star:
             params, perror = self.mfit.params, self.mfit.perror
             self.p_up, self.p_down = params + perror, params - perror
 
-            logging.info('Photosphere for %s fit with T=%s K'
-                         % (self.starname, self.StarTemp))
+            logging.info(f'Photosphere for {self.starname} fit with '
+                         f'T={self.StarTemp} K')
 
             wave_min, wave_max = specs['spec_sample']['wave_min'], \
                                  specs['spec_sample']['wave_max']
@@ -238,7 +242,7 @@ class Star:
             self.StarPhotosphere_unsc = self.StarPhotosphere
 
             for band in self.mags2use:
-                flxt = STools.rsr_flux(getattr(STools, '{}pband'.format(band)),
+                flxt = STools.rsr_flux(getattr(STools, f'{band}pband'),
                                        *self.StarPhotosphere)[0]
                 self.photFlux['%s' % band] = flxt
 
@@ -311,7 +315,6 @@ class Star:
             mags4Phot0 = self.W3Adopt(specs, mags4Phot0, True)
         if specs['W2Adapt']:
             mags4Phot0 = self.W2Adopt(specs, mags4Phot0, True)
-
         # Remove optical bands cause of late spectral type?
         if self.starsdat['NoOptical'][self.sid]:
 
@@ -321,25 +324,22 @@ class Star:
                 # arr = np.array(arr)
                 for mv in specs['phot']['Remove_RedStars']:
                     try:
-                        # import pdb
-                        # pdb.set_trace()
+                        # todo: change string formatting from %s
                         ind = np.where(np.array(eval(arr)) == mv)[0]
                         self.bv_unusedDict[mv] = self.starsdat[mv + 'm'][self.sid]
-                        exec('%s = np.delete(%s,ind)' % (arr, arr))
+                        exec(f'{arr} = np.delete({arr},ind)')
                     except ValueError:
                         pass
-        # ========================================
+        # ====================================================
         # KEEP ONLY VALID PHOTOMETRIC MEASUREMENTS.
         for mv in mags2use0:
 
             try:
                 temp_mf = self.starsdat['{}m'.format(mv)][self.sid]
-            except KeyError:
-                #                try:
+            except KeyError as e:
+                print(f"Error: The key '{e.args[0]}' was not "
+                      f"found in the mags2use0 list.")
                 temp_mf = self.starsdat['{}'.format(mv)][self.sid]
-                # except KeyError:
-                #     sys.exit('I dont recognize that photometric band mag or flux. Check your input file.')
-
             # CHECK IF IT'S NULL. REMOVE IF SO FROM ENTIRE LIST.
             if temp_mf == 'null':
                 try:
@@ -378,7 +378,8 @@ class Star:
 
                     # WHEN THERE IS A NULL VALUE
                     try:
-                        efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
+                        efj = float(
+                            self.starsdat[f'{mv}_fluxe'][self.sid])
                     except ValueError:
                         efj = 0.05 * fj
 
@@ -390,7 +391,7 @@ class Star:
 
                     vegaMagDict_temp[mv] = fmag
                     vegaMagErrDict_temp[mv] = efmag
-
+                    print(f'{mv} was converted to magnitude')
                     # Assumes the rest is a magnitude
                 else:
                     vegaMagDict_temp[mv] = temp_mf
@@ -398,52 +399,6 @@ class Star:
                         vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
                     else:
                         vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
-
-            # if self.starsdat['{}m'.format(mv)][self.sid] == 'null':
-            #     try:
-            #         mags2use0.remove(mv)
-            #         logging.info('{} band removed from mags2use0'.format(mv))
-            #     except ValueError:
-            #         loggging.error('Error in removing {} from mags2use'.format(mv))
-            #     try:
-            #         mags4Phot0.remove(mv)
-            #         logging.info('{} band removed from mags4Phot0'.format(mv))
-            #     except ValueError:
-            #         loggging.error('Error in removing {} from mags4phot'.format(mv))
-            #     try:
-            #         mags4scale0.remove(mv)
-            #         logging.info('{} band removed from mags4scale0'.format(mv))
-            #     except ValueError:
-            #         loggging.error('Error in removing {} from mags4scale'.format(mv))
-            #     try:
-            #         mags4Dust0.remove(mv)
-            #         logging.info('{} band removed from mags4Dust0'.format(mv))
-            #     except ValueError:
-            #         loggging.error('Error in removing {} from mags4dust'.format(mv))
-            #
-            # else:
-            #     # CHECK IF IT IS MAG OR FLUX
-            #     if '_flux' in mv:
-            #         freq = eval('stoo.{}pband.isoFrequency()'.format(mv))
-            #         fj = float(self.starsdat['%s_flux'%mv][self.sid])
-            #         # WHEN THERE IS A NULL VALUE
-            #         try:
-            #             efj = float(self.starsdat['{}_fluxe'.format(mv)][self.sid])
-            #         except ValueError:
-            #             efj = 0.05 * fj
-            #         fcgs, efcgs= np.array(STools.Jy2cgs((freq, fj), (0, efj))) \
-            #                      / eval('STools.%spband.isoWavelength()' % mv)
-            #
-            #         vegaMagDict_temp[mv] = fcgs
-            #         vegaMagErrDict_temp[mv] = efcgs
-            #
-            #     # Assumes the rest is a magnitude
-            #     else:
-            #         vegaMagDict_temp[mv] = float(self.starsdat['{}m'.format(mv)][self.sid])
-            #         if self.starsdat['%sme' % mv][self.sid] == 'null':
-            #             vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
-            #         else:
-            #             vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
 
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
@@ -734,9 +689,15 @@ class Star:
         # PLOT PHOTOSPHERE CONTINUUM
         ax.plot(xlam * _ANG2MICRON, yflux * xlam, color=lcolor, ls=linestyle, lw=lw, **kwargs)
 
-        for band in self.mags2use:
-            ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
-                    marker=marker, mfc=pcolor, mec=pcolor, ms=pointsize, zorder=10)
+        for i, band in enumerate(self.mags2use):
+            if i == 0:
+                ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
+                        marker=marker, mfc=pcolor, mec=pcolor, ms=pointsize, zorder=10,
+                        **kwargs)
+            else:
+                ax.plot(self.wave[band] * _ANG2MICRON, self.photFlux[band] * self.wave[band],
+                        marker=marker, mfc=pcolor, mec=pcolor, ms=pointsize, zorder=10)
+
 
     def plot_observedData(self, ax, ms=4, lcolor='k', pcolor='g',
                           markerp='o', markernp='*', capsize=0, linestyle='-',
@@ -765,7 +726,7 @@ class Star:
         ax.plot(xlam * _ANG2MICRON, ylam * xlam, color=lcolor,
                 ls=linestyle, lw=lw, **kwargs)
 
-        for band, lam in list(self.wave.items()):
+        for i, (band, lam) in enumerate(list(self.wave.items())):
             flx = self.flux[band + '_flux']
             flxerr = self.fluxerr[band + '_flux']
 
@@ -773,6 +734,9 @@ class Star:
                 pfmt = '%s%s' % (pcolor, markerp)
             else:
                 pfmt = '%s%s' % (pcolor, markernp)
-
-            ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr * lam,
-                        fmt=pfmt, ms=ms)
+            if i == 0:
+                ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr * lam,
+                            fmt=pfmt, ms=ms, **kwargs)
+            else:
+                ax.errorbar(lam * _ANG2MICRON, flx * lam, yerr=flxerr * lam,
+                            fmt=pfmt, ms=ms)

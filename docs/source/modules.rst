@@ -1,7 +1,10 @@
-twinkle
-=======
+Modules
+========
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 4
 
-   twinkle
+    sed
+    twinkle
+    sed_physics
+
