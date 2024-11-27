@@ -1,6 +1,6 @@
 # TWINKLE!
 
-![Twinkle Logo](docs/source/Logo/twinkle_logo_light.png')
+![Twinkle Logo](docs/source/_static/Logo/twinkle_logo_light.png')
 
 ## ReadtheDocs
 
