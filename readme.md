@@ -41,7 +41,25 @@ To install:
 
 ```bash
 pip install git+https://github.com/astropatel/twinkle.git
+```
 
+--- 
+
+## The Logo
+I created the Twinkle logo after obtaining baseline ideas from AI image generators, and then drawing it on Inkscape. The top prong, or point, or (what is it called?) of the star image is meant to look like a stellar SED.
+
+---
+
+## The Name
+I prefer my projects to have apt names, but then like to backronym it into something non-sensical and fun. While I haven’t landed on one for TWINKLE, here are suggestions from friends and colleagues
+
+The WIse Non-gaseous disK Locator Extraordinaire (by: Scott Barenfeld)
+
+The Wise Infrared Non-gaseous disK Locator Extraordinaire (by: Calen Henderson)
+
+That’s What I Need to Know about teLescopes from Experts (by: Tiffany Meshkat)
+
+---
 References:
 
 1. EMamajek_MSColors.txt from http://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt
