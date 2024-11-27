@@ -1,20 +1,15 @@
 """
-***********************************************************************
-    twinkle.py by Rahul I. Patel (ri.patel272@gmail.com)
-***********************************************************************
-Issues and changes that need to be made:
- 2. #todo Add attributes description to doc string
- 3. #todo Fix plot functions to use kwargs
- 5. #todo Have code use more than Bt-Vt to interpolate mamajek's file
- 6. #todo change user input file from txt to excel
- 7. #todo put user input load function outside of twinkle
+twinkle.py by Rahul I. Patel (ri.patel272@gmail.com)
+
+The class Star can be instantiated for a single star, giving you a STAR object
+for each star that you want to characterize.
+
 """
 
 import os
 import copy
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 from . import sed
 # from twinkle import sed
 from astropy import constants as con

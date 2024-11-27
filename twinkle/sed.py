@@ -1,17 +1,10 @@
 """
-  Issues and changes that need to be made:
-  1. todo: Remove mpfit and use internal scipy fitting routine.
-  2. todo: vega2AB needs to be updated or deprecated.
-  3. todo Add logger -- DONT' NEED FOR THIS ONE
-  4. todo remove readcol.py -- DONE, Tested
-  5. todo remove astro_tools -- DONE
-  7. todo Change init to only load pband files from mags2use.
-  8. todo Calc_temp needs better docstring
-  9. todo: replace with pathlib
-  10. todo: remove all the non-static folders/file names from the json file and add to directories.py
-  11. todo: consider whether to merge twinkle and sed together into one file.
-  12. todo: set print_input_file to print the full dataframe or make it prettier
-  13. todo: NoOptical doesn't work
+ sed.py by Rahul I. Patel (ri.patel272@gmail.com)
+
+ Various tools to help with spectral energy distribution
+ fitting, data managements, model management, physical tools
+ spectral response functions
+
 """
 
 import os, re, sys, operator
