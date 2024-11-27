@@ -4,21 +4,21 @@ User Input File
 .. note:: A future iteration of the user input file will change to an excel file to make it easier. It is currently a text file.
 
 
-The stellar input file contains all the metadata required for each star whose spectral energy distribution (SED) you wish to model. In the JSON parameterfile (file github | page description xxx links), the file path is described as
+The stellar input file contains all the metadata required for each star whose spectral energy distribution (SED) you wish to model. In the `JSON parameterfile <https://github.com/astropatel/twinkle/blob/master/paramfile.json>`_ (see the :doc:`Set-Up page<set_up>`) the file path is described as
 
 .. code-block:: rst
 
     ``['folders']['topdir']``/``['folders']['supportdir']``/StellarInputFiles
 
-where, in the parameter file, and in the online github example, it's
+where, in the parameter file, and in the project repo example, it's
 
 ::
 
-    twinkle-master/Inputs_and_Models/StellarInputFiles/sample_stardata.txt.
+    twinkle-master/Inputs_and_Models/StellarInputFiles/sample_stardata_simple.txt.
 
 The input file is a tab separated value (tsv) file, with a header where each column corresponds to a different meta-data parameter for each star. Each subsequent line contains information for a different star.
 
-Below is a simple stellar input file (broken up for easier viewing, but it would be a 3 row by 20 column file) that includes optical photometric data and some mid-infrared `WISE data <https://www.jpl.nasa.gov/missions/wide-field-infrared-survey-explorer-wise/>`_. You can download The contents of this simple input file here (xxx github link).
+Below is a simple stellar input file (broken up for easier viewing, but it would be a 3 row by 20 column file) that includes optical photometric data and some mid-infrared `WISE data <https://www.jpl.nasa.gov/missions/wide-field-infrared-survey-explorer-wise/>`_. You can download the contents of this input file and others `here <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/StellarInputFiles>`_.
 
 
    +-----------+-----+--------+----------+--------+------+
@@ -45,13 +45,13 @@ Below is a simple stellar input file (broken up for easier viewing, but it would
    | 5.9 | 0.01 | 6.2| 0.07 | 4.6 | 0.04 |
    +-----+------+----+------+-----+------+
 
-The file, shows meta-data for two stars, `Star_ID1`, and `Star_ID2` under the ``MainName`` column. All the columns up to ``e_B-V`` are not optional. This of course implies that the photometric columns are optional. You don't technically need to include any photometric bands, besides Johnson `B` & `V` but then you wouldn't get anything modeled. So you SHOULD include SOME photometric bands.
+The file shows meta-data for two stars, `Star_ID1`, and `Star_ID2` under the ``MainName`` column. All the columns up to ``e_B-V`` are not optional. This of course implies that the photometric columns are optional. You don't technically need to include any photometric bands, besides Johnson `B` & `V` but then you wouldn't get anything modeled. So you SHOULD include SOME photometric bands.
 
 .. important::
     For the moment, one must include the Johnson B and V photometry and uncertainties (``BJm``, ``BJme``, ``VJm``, ``VJme``).
 
 
-A full stellar input file can be found at this github link (xxx insert link). You'll see a number of different columns that you can use for your simulation. The file ``Input_StarFile_Description.xlsx`` contains information for all acceptable meta-data columns in your input stellar file, as well as column `descriptions`, `data type`, `units`, `parameter restrictions`, `examples` of the data, and whether the column is optional for the simulation or not. A copy of the file can be found below and at this link (xxx insert github link).
+A full stellar input file can be found in the `project repo here <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/StellarInputFiles>`_. You'll see a number of different columns that you can use for your simulation. The file ``Input_StarFile_Description.xlsx`` (also included in the project repo) contains information for all acceptable meta-data columns in your input stellar file, as well as column `Descriptions`, `Data Type`, `Units`, `parameter restrictions`, `examples` of the data, and whether the column is optional for the simulation or not. The image and truncated/scrollable table shows what you'll find in the ``Input_StarFile_Description.xlsx`` file.
 
 .. _input_file_description_image-label:
 
@@ -85,9 +85,9 @@ A full stellar input file can be found at this github link (xxx insert link). Yo
    </div>
 
 
-The photometric bands that can be included for SED and excess flux calculations are listed in the  file under ``/Inputs_and_Models/RSR/available_filters.txt`` (XXX insert github link to file).
+The photometric bands that can be used to calculate the SED and excess flux are listed in the  file located ``~/Inputs_and_Models/RSR/available_filters.txt``. More information on the relative spectral response (RSR) files can be found on the :ref:`Model Data Page<RSR_Description-label>`.
 
-To see what the output of the modeling would look like with different meta-data in the stellar input file, check out the Jupyter Notebook tutorial at (XXX insert link).
+To see what the output of the modeling would look like with different meta-data in the stellar input file, check out the `Jupyter Notebook tutorial <https://github.com/astropatel/twinkle/blob/master/Twinkle_Tutorial.ipynb>`_.
 
 .. important::
     The column strings should not have the asterisks. If the \* columns are not included,

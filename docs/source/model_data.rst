@@ -4,17 +4,23 @@ Model Data
 Stellar Grid Models
 *********************
 
-The stellar grids are the backbone (or another important structural body part analogy) of `Twinkle` and essential to any SED modeling effort. These are stellar atmopsheric models that have been calculated/generated for a grid of stars at a range of temperatures, solar-relative metallicities, and gravities. Simply, they're models of wavelength vs. flux for stars that we use to model calculate the best fit to the empirical photometric data you provide `Twinkle`.
+The stellar grids are the backbone (or another important structural body-part analogy) of `Twinkle` and essential to any SED modeling effort. These are stellar atmopsheric models of flux from the star at a range of wavelengths that have been calculated/generated for a stars at a range of temperatures, solar-relative metallicities, and surface gravities. `Click here for more information <http://astro.vaporia.com/start/stellarmodelatmosphere.html#:~:text=A%20stellar%20model%20atmosphere%20is,star's%20emitted%20electromagnetic%20radiation.>`_.
+
+These models of wavelength vs. flux are what `Twinkle` uses to determine the best fit to the input photometric band data and calulate stellar parameters for the observe information.
 
 `Twinkle` relies on two main atmospheric models: The `Kurucz Atlas 9` (`Kurucz 1993 <https://ui.adsabs.harvard.edu/abs/1993yCat.6039....0K/abstract>`_) and the `NextGen` atmospheric models (`Hauschildt et al. 1999 <https://iopscience.iop.org/article/10.1086/306745>`_).
 
-Both model files should be in the project path as shown in the set-up section (XXX - link to page) and listed in the JSON input file ``['folders']['topdir']``/``['folders']['supportdir']``/StellarGridModels/ (e.g., `twinkle-master/Inputs_and_Models/StellarGridModels/`).
+Both model files need to be in the project path as shown in the :ref:`Directory Structure section of the Set-Up Page<directory_structure-label>` and listed in the JSON input file ``['folders']['topdir']``/``['folders']['supportdir']``/StellarGridModels/ (e.g., `twinkle-master/Inputs_and_Models/StellarGridModels/`).
 
-For quick access you can find the models on the Github page, (XXXX - link here)
+For quick access you can find the models on the `Github page here <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/StellarGridModels>`_.
 
-.. note:: I have primarily set `ATLAS9` for SED modeling late B-spectral type stars, while the `NextGen` models are best for A-K spectral types.
+.. note::
 
-.. note:: You can set the model you want to use in the stellar input file (xxx insert link to page) under the ``model`` column, and this can be changed for different stars in your input file.
+    I have primarily set `ATLAS9` for SED modeling late B-spectral type stars, while the `NextGen` models are best for A-K spectral types.
+
+.. note::
+
+    You can set the model you want to use in the :doc:`user input file<input_data>`  under the ``model`` column, and this can be changed for different stars in your input file.
 
 .. _atlas9-label:
 
@@ -68,9 +74,9 @@ We can see the Binary Table is a 1221 row by 12 column table, where the values i
 NextGen
 *******************
 
-As I mentioned before, you should specify to the code to use the NextGen atmospheric grid models for spectral types A-K. I originally downloaded the spectra (.spec) files from the late Dr. France Allard's page.
+As I mentioned before, you should specify to the code to use the NextGen atmospheric grid models for spectral types A-K. I originally downloaded the spectra (.spec) files from the `late Dr. France Allard's page <http://hobbes.hs.uni-hamburg.de/InMemoriamFrance.html>`_.
 
-As of now, the most readily accessible models the code can use are of solar metalicity (Z=0), with relevant surface gravities of log(g) from 3.5 to 5.5 in increments of 0.5.
+The most readily accessible models the code can use are of solar metalicity (Z=0), with corresponding surface gravities of log(g) from 3.5 to 5.5 in increments of 0.5.
 
 The current processed files are in the NextGen folder with each file labeled in the format of `lteNextGen_[TEMP]_[GRAV]_[MET].txt`. ``TEMP`` is the stellar temperature, ``GRAV`` is the surface gravity, and ``MET`` is the metallicity. Each file is a two-column text file, where the first column is wavelength in Angstroms, and the second is flux in :math:`\mathrm{ergs}\  \mathrm{cm}^{-2}\ \mathrm{s}^{-1} \mathrm{Å}^{-1}`.
 
@@ -90,9 +96,9 @@ For instance, the Ks-band in the NIRC2 instrument on Keck looks like this:
 
 The image shows the percentage of light that passes through the filter at a given wavelength in the range of 1.9 to 2.4 microns. `Twinkle` takes this filter (and other relevant ones) and convolves it with the modeled photospheric emission and sums the flux over that bandpass. We then use the summed flux at the central or isophotal wavelength for the flux at that wavelength.
 
-All the filter files should be placed in the project path as shown in the set-up section (XXX - link to page) and listed in the JSON input file ``['folders']['topdir']``/``['folders']['supportdir']``/RSR/ (e.g., `twinkle-master/Inputs_and_Models/RSR/`).
+All the filter files should be placed in the project path as shown in the :ref:`Directory Structure of the Set-Up page<directory_structure-label>` and listed in the JSON input file ``['folders']['topdir']``/``['folders']['supportdir']``/RSR/ (e.g., `twinkle-master/Inputs_and_Models/RSR/`).
 
-A list of available filters can be found in the readme file in the downloaded project folders (XXX link on github) or :download:`here <_static/Filters_ReadME.txt>`. This file also contains references from where the filters were obtained, as well as information on what the header line for each filter file contains in section I.
+A list of available filters can be found in the `Filters ReadME Text file <https://github.com/astropatel/twinkle/blob/master/Inputs_and_Models/RSR/Filters_ReadME.txt>`_ in the downloaded project folders or :download:`download it here <_static/Filters_ReadME.txt>`. The readme file also has references of where the filters were obtained, as well as information on what the header line for each filter file contains.
 
 .. important::
 
@@ -122,6 +128,11 @@ If you want to create your own reponse curve to be read by `Twinkle`, it needs t
        WISE W1 RSR File Formatted for Twinkle Use
    </div>
 
+.. raw:: html
+
+   <div style="text-align: center;">
+       <br>
+   </div>
 
 
 The file snippet shows the response curve data for the Wide-Field Infrared Survey Explorer (WISE) W1 filter. The second line contains the column header for the wavelength (microns) and the transmission.
@@ -146,11 +157,4 @@ N5 = uncertainty in Vega zero point flux (:math:`\mathrm{ergs}\  \mathrm{cm}^{-2
 
 
 All this information can be found in the readme file linked above.
-
-
-
-
-
-
-
 

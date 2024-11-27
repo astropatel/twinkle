@@ -4,8 +4,8 @@ Modules
 .. toctree::
     :maxdepth: 4
 
-    sed
     twinkle
+    sed
     directories
     mosaic_tools
     sed_physics

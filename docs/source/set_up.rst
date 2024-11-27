@@ -160,6 +160,7 @@ The **WISE_excess** section defines WISE photometry cuts for identifying excess 
 Data Files and Folder Structure
 ******************************************
 
+.. _directory_structure-label:
 
 Directory Structure
 ---------------------
