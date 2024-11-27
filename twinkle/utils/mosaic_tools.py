@@ -1,5 +1,3 @@
-
-
 """
  mosaic_tools by Rahul I. Patel (ri.patel272@gmail.com)
 
@@ -14,7 +12,7 @@
 __author__ = 'Rahul I. Patel'
 
 import scipy
-
+import sys
 import random as rnd
 import scipy.linalg.blas
 import operator
@@ -55,7 +53,8 @@ class PlottingTools:
 
         divider = make_axes_locatable(axScatter)
         axHistX = divider.append_axes("top", size=2, pad=0.2, sharex=axScatter)
-        axHistY = divider.append_axes("right", size=2, pad=0.2, sharey=axScatter)
+        axHistY = divider.append_axes("right", size=2, pad=0.2,
+                                      sharey=axScatter)
         plt.setp(axHistX.get_xticklabels(), visible=False)
         plt.setp(axHistY.get_yticklabels(), visible=False)
 
@@ -108,7 +107,8 @@ class PlottingTools:
             plt.rc('font', weight='bold')
         plt.rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
         plt.rcParams['mathtext.fontset'] = 'stixsans'
-        axis.tick_params(axis='both', which='major', labelsize=ticklabel_fontsize)
+        axis.tick_params(axis='both', which='major',
+                         labelsize=ticklabel_fontsize)
         plt.rc("axes", linewidth=axes_linewidth)
         plt.rcParams['xtick.major.size'] = majortick_size
         plt.rcParams['xtick.minor.size'] = minortick_size
@@ -156,315 +156,10 @@ class PlottingTools:
         return
 
 
-class ImageTools:
-    def load_image(self, file):
-        self.f = fits.open(file, memmap=False)
-        self.img = self.f[0].data
-
-        return self.img
-
-    def load_NFits(self, file_list):
-        """Load all data in file list to cube"""
-        datCube = []
-        for fle in file_list:
-            img = self.load_image(fle)
-            datCube.append(img)
-
-        return np.array(datCube)
-
-    def get_centroid(self, img, fwhm_gauss_kern, center, xb, yb, maxiter=5, conv=0.01):
-        from scipy import ndimage
-        from skimage.measure import moments, moments_central
-        from skimage.filter import gaussian_filter as gf
-        import math as ma
-        # from photutils.detection import findstars
-
-        # pdfs = findstars
-        # kern = pdfs._FindObjKernel(fwhm_gauss_kern,1.0,0.0,1.5)
-        sigma = fwhm_gauss_kern / (2.0 * ma.sqrt(2.0 * ma.log(2.0)))
-        xcen0, ycen0 = center
-        xcen, ycen = int(xcen0), int(ycen0)
-        dxrel, dyrel = 10., 10.
-        lx, ly = img.shape
-
-        iteri = 0
-
-        # while ((round(dxrel,2)<=conv) and (round(dyrel,2)<=conv)) or iteri<maxiter:
-        while iteri < maxiter:
-            xd, yd = xcen - xb, ycen - yb
-            mask = np.zeros((lx, ly))
-            mask[ycen - yb:ycen + yb + 1, xcen - xb:xcen + xb + 1] = 1
-            maskedimg = np.multiply(img, mask)
-            cutoutimg = maskedimg
-            # cutoutimg = gf(maskedimg,sigma=sigma,mode='constant')
-            # cutoutimg = img[xcen-xb:xcen+xb+1,\
-            #   ycen-yb:ycen+yb+1].astype('f8')
-            # imcutconv = ndimage.convolve(cutoutimg, kern.kern, mode='constant')
-            # imcutconv = imcutconv.astype('f8')
-            # imcutconv = np.where(imcutconv>0, imcutconv,0)
-
-            # m = moments(imcutconv,1)
-            m = moments(cutoutimg, 1)
-            xm = (m[1, 0] / m[0, 0])  # + xd
-            ym = (m[0, 1] / m[0, 0])  # + yd
-
-            dx, dy = abs(xm - xcen), abs(ym - ycen)
-            dr = ma.sqrt(dx ** 2 + dy ** 2)
-            dxrel, dyrel = dx / xcen, dy / ycen
-            xcen, ycen = xm, ym
-
-            iteri += 1
-
-        return (xcen, ycen, xcen0, ycen0, dx, dy, dxrel, dyrel)
-
-
-class PlanetSort:
-    """
-    ==================================================================
-     Various tools to help plot or analyze monte-carlo results from
-     planet detectability simulation.
-     =================================================================
-     """
-
-    def get_pre_var_bins(self, data_stuff, var_name, var_max):
-        """FOR BOTH TYPES OF SIMULATIONS
-
-        Creates matrix of all pre-created bins from file:
-                matrix rows: star/spt (if N or 1 planet gen /star)
-                matrix col: bin value
-
-        dft: datafile object of file with bins previously created per star/spt
-             or w/e
-        var_name: Variable name: either mass or sep
-        var_max = maximum value of variable
-
-        output: matrix as described above.
-                matrix: mat[i][j] := mat[star/spt][bin value]"""
-
-        # APPEND MATRIX BY COLUMNS OF BINS--LATER TRANSPOSE
-        mat_var_bin = np.array([])
-        var_max = int(var_max)
-        # print 'var_name in prevar', var_name
-        for i in range(var_max + 1):
-            try:
-                temp_binarr = data_stuff[var_name + '_' + str(int(i))]
-            except:
-                break
-
-            # APPEND EACH BIN TO mat_var_bin
-            if len(mat_var_bin) == 0:
-                mat_var_bin = np.array([temp_binarr])
-            else:
-                mat_var_bin = np.append(mat_var_bin, [temp_binarr], axis=0)
-        # NOW EACH ROW CORRESPONDS TO EACH STAR
-        mat_var_bin = mat_var_bin.transpose()
-        # print 'get_pre_',mat_var_bin
-        return mat_var_bin
-
-    def group_by_stars(self, star_arr):
-        """
-        returns two arrys: upper and lower indices to group planets by star name
-        this is assuming that all planets for a single star are not scattered
-        in the datafile.
-
-        Input: Array of star names or identifiers
-            ex: [star_1, star_1, star_1,... star_i, star_i, star_i...]
-            each index for same star corresponds to different planet simulated for
-            that star
-            Module is used for simulation of d number of stars generated per star.
-        """
-        j = 0
-        upper = []
-        lower = []
-        while j < len(star_arr):
-            lower_index = j
-            equal = star_arr[lower_index]
-            while (equal == star_arr[j]):
-                j += 1
-                if j == len(star_arr):
-                    break
-            upper_index = j - 1
-            upper.append(upper_index)
-            lower.append(lower_index)
-
-        return [np.array(lower), np.array(upper)]
-
-    def index_spt(self, spt, spt_arr):
-
-        """
-        Calculate Location of a given spectral type (spt)
-            in a numpy array of mixed spectral types (spt_arr)
-            Input: spt: One character string for first spectral
-                        indicator: ex: O,B,A,F,G,K,M,L...
-                    spt_arr: numpy array of spectral types
-
-            output: Numpy array of indices
-        """
-        ind_spt = np.array([])
-        for i in range(len(spt_arr)):
-            # if first character in spt_array[i] corresponds to matching spt.
-            if spt_arr[i].rfind(spt) == 0:
-                ind_spt = np.append(ind_spt, i)
-            else:
-                pass
-        return np.array(ind_spt, dtype='int')
-
-    def get_ind(self, var_arr, range=(0, 100)):
-        """
-        Collects the location of the items in var_arr (numpy array)
-        between range.
-        input: var_arr: array of variable values (sorted or unsorted)
-               range: either a tuple or list or array with a min and
-               max value to search values within var_arr
-
-        output: numpy array of int's pointing to indices in var_arr falling within
-                range
-        """
-        min, max = range[0], range[1]
-        ind_array = np.where((var_arr >= min) & (var_arr <= max))[0]
-
-        return ind_array
-
-    def find_score_ind(self, ind_dist, ind_age, spt_ind):
-        """
-        Collect all the values in var_arr corresponding to the
-        intersection of indices in the arrays: ind_dist, ind_age
-        and spt_ind:
-
-        ind_dist, ind_age: array of indices which fall into within the
-        age and dist criteria for plotting.
-        spt_ind: array of indices found in datafile with that specific
-                 first letter spectral type.
-
-        note: this can also send back None type, indicating no stars were located
-              the triple intersection.
-        """
-
-        int1 = np.intersect1d(ind_dist, ind_age)  # group off same distance and age matches
-        int3 = np.intersect1d(int1, spt_ind)  # group off distance, age, and spectral type matches
-
-        return np.array(int3, dtype='int')
-
-    def create_y_N(self, spt, ind_dist, ind_age, ind_spt,
-                   mat_var_bin, mat_weights):
-        """
-        To be used for N stars generated around a single star
-        Input--> spt: string value of spectral type B,A,F,G,K,M
-                 ind_*: array of integers pointing to locations in
-                        mat_var_bin for selected survey criteria
-                 mat_var_bin: matrix of binned score values
-        """
-
-        # print mat_weights
-        npa = np.average
-        sc = np.array([])
-        sc_weights = np.array([])
-        mat = mat_var_bin
-        mat_weights = mat_weights
-
-        if spt == 'all':
-            # TO BE USED FOR AVERAGES OVER ALL SPECTRAL TYPES
-            sc_ind = np.array(np.intersect1d(ind_dist, ind_age), dtype='int')
-        else:
-            sc_ind = find_score_ind(ind_dist, ind_age, ind_spt)
-        # print 'sc_ind:',sc_ind
-        # for i in range(np.size(mat, axis=1)):
-        # print sc_ind
-        # CREATE ARRAY OF ZEROES
-        # print np.size(mat_weights,axis=0),np.size(mat_weights,axis=1)
-        if len(sc_ind) == 0 or sc_ind == None:
-            score_avg = np.arange(np.size(mat, axis=1))
-
-        else:
-
-            for i in range(len(sc_ind)):
-                ind = sc_ind[i]
-                if len(sc) == 0:
-                    # sc = np.array([find_scores(ind_dist, ind_age, ind_spt, mat[:,i])])
-                    # IF NO STARS MATCH POPULATION CRITERIA, SCORE OF ZERO
-                    # APPENDS i'th column and rows indicated by sc_ind to sc
-                    # columns represent bin columns. Rows represent stars
-                    mat
-                    sc = np.array(mat[ind, :])
-                    sc_weights = np.array(mat_weights[ind, :])
-                    # print sc, type(sc), mat[ind,:]
-                    # print sc
-                else:
-                    # print sc
-                    # print mat[ind,:]
-                    # print np.size(mat[ind,:])
-                    # print ind
-                    sc_weights = np.vstack((sc_weights, mat_weights[ind, :]))
-                    sc = np.vstack((sc, mat[ind, :]))
-                    # sc_weights = np.append(sc_weights, mat_weights[ind,:], axis=0)
-                    # sc = np.append(sc, mat[ind,:], axis=0)
-
-            # print 'sc',sc
-            # print sc#
-            print(np.sum(sc * sc_weights), np.sum(sc_weights))
-            score_avg = npa(sc, weights=sc_weights, axis=0)
-            # print score_avg
-
-        score_avg = np.insert(score_avg, [0], 0)
-
-        return score_avg
-
-    def create_y_ONE(self, spt, ind_dist, ind_age, ind_spt, mat_var_bin):
-
-        mat = mat_var_bin
-        # finds all indices for given age and dist survey and spt.
-        # HINT: There can be only one index that fit all these criteria as
-        #      everything in mat_var_bin should be pre-binned stuff
-        # print mat
-
-        sc_ind = find_score_ind(ind_dist, ind_age, ind_spt)
-
-        # print spt, ind_dist, ind_age, ind_spt, sc_ind[0]
-        scores = mat[sc_ind[0], :]  # <<==== Hence why it's 0 <--
-        # insert's 0 to beginning of array.
-        scores = np.insert(scores, [0], 0)
-
-        return scores
-
-    def planet_header(self, head_name, name=True, spt=True):
-        # Name: name of star
-        # spt: spectral type of star
-
-        ##if name and spt of the star are in the file
-        if name and spt:
-            write_format = write_format = '%15s \t%8s'
-            for j in range(len(head_name) - 2):
-                write_format += ' \t%8.2f'
-        ##if name but not spt of star are in the file
-        elif name and not spt:
-            write_format = '%15s'
-            for j in range(len(head_name) - 2):
-                write_format += ' \t%8.2f'
-        ##if not name but spt in the file
-        elif spt and not name:
-            write_format = '%8s'
-            for j in range(len(head_name) - 2):
-                write_format += ' \t%8.2f'
-        ##if name and spt are not in the file
-        else:
-            write_format = ''
-        write_format += '\n'
-
-        header = ''
-        ##CREATE HEADER
-        for m in range(len(head_name)):
-            header += head_name[m] + '\t'
-        header += '\n'
-
-        return (header, write_format)
-
-
 class ArrayTools:
     """
-    ==================================================================
-    A few small functions to work with intersection and union of
+    A few functions to work with intersection and union of
     numpy arrays
-    =================================================================
     """
 
     def intersect_arrays(self, arrays):
@@ -557,18 +252,22 @@ class ArrayTools:
 
 class ReadWrite_Tools:
     """
-    =================================================================
     Read and Write tools once stuff is read
-    =================================================================
 
-     """
+    """
 
     def create_datadict(self, hnames, data):
         """
-         To create a dictionary from 2d array of data and header names
-         for each column in the 2d array. The keys in the new dictionary
-         are the header names provided
-         """
+        Create a dictionary from a 2D array of data and corresponding header names.
+
+        Args:
+            hnames (list): List of header names to use as keys.
+            data (array): 2D array where each column corresponds to a header.
+
+        Returns:
+            dict: Dictionary with header names as keys and data columns as values.
+        """
+
         p = []
         for j, key in enumerate(hnames):
             p.append((key.strip(), data[j]))
@@ -578,11 +277,19 @@ class ReadWrite_Tools:
 
     def create_header(self, list0, more=None, nowrite=None, delimiter='\t '):
         """
-          Creates a header string with items from "list", which is a
-          list, array, etc. of strings, and disregards those items in "list"
-          that are in "nowrite"
-          ['head1','head2',...,'headn'] --> "head1\t head2\t ... headn"
-         """
+        Create a header string from a list of strings, excluding specified items.
+
+        Args:
+            list0 (list): List of strings to include in the header.
+            more (list, optional): Additional strings to append to the header.
+            nowrite (list, optional): Items to exclude from the header.
+            delimiter (str, optional): Delimiter used to separate header items.
+                Defaults to '\\t'.
+
+        Returns:
+            str: Formatted header string with specified items and delimiter.
+        """
+
         listnew = np.array(list0).copy()
         header = ''
         if nowrite is not None:
@@ -610,16 +317,15 @@ class ReadWrite_Tools:
 
     def sort_duplicates(self, file, dupcol='object_u', duplicates=None):
         """
-        This module puts all the duplicate values in a large file sorted at the
-        top of the file and writes out that new file as the same file name but with
-        a numerical additive: ex: test.dat--> test_2.dat
-        Also saves the original header of the original input file data
-        file: filename
-        dupcol: col name that is to be used in "file" to search for duplicates
-        duplicates: list/Array of known duplicates to be used. If this is left
-                    None, then module searches for duplicates and sorts those
+        Sort duplicate values in a data file and save a new version with duplicates at the top.
 
-        Returns; filename where sorted file is located
+        Args:
+            file (str): Path to the input file.
+            dupcol (str, optional): Column name used to identify duplicates. Defaults to 'object_u'.
+            duplicates (list, optional): Known duplicates. If None, duplicates are identified automatically.
+
+        Returns:
+            str: Filename of the new sorted file.
         """
 
         import collections
@@ -631,11 +337,12 @@ class ReadWrite_Tools:
 
         # todo: remove readcol
         names, data = readcol(file, names=True)
-        ##create dictionary with index and column names as val and keys
-        ##and vice versa
+        # create dictionary with index and column names as val and keys
+        # and vice versa
         name_dict2 = dict(enumerate(names))
-        name_dict3 = dict(list(zip(list(name_dict2.values()), list(name_dict2.keys()))))
-        ## gather
+        name_dict3 = dict(
+            list(zip(list(name_dict2.values()), list(name_dict2.keys()))))
+        # gather
         dupcolname = data[:, name_dict3[dupcol]]
 
         # IN CASE NO LIST OF DUPLICATES ARE GIVEN, IT FINDS ALL DUPLICATES AND
@@ -643,7 +350,8 @@ class ReadWrite_Tools:
         if duplicates is None:
 
             scount = collections.Counter(dupcolname)
-            ky_set1, val_set1 = np.array(list(scount.keys())), np.array(list(scount.values()))
+            ky_set1, val_set1 = np.array(list(scount.keys())), np.array(
+                list(scount.values()))
             ind_dup = np.where(val_set1 > 1)[0]
             duplicate_list = ky_set1[ind_dup]
         else:
@@ -677,897 +385,78 @@ class ReadWrite_Tools:
         return file2
 
 
-class RandTools:
-    """
-    =================================================================
-    Tools to generate random numbers based on specific distributions
-    =================================================================
-    """
-
-    def random_sphere(self, rad, min_th, max_th):
-        """function to randomly generate vector in spherical coordinates
-        
-        Parameters:
-        -----------
-        rad: scalar value for radius of sphere.
-        min_th, max_th: scalar values for range of phi (azimuthal angle)
-                        in radians
-        
-        Returns:
-        --------
-        [r,theta,phi] --> array of spherical coordinate values. 'r' is radial
-        component, theta is longitudinal and phi is azimuthal.
-        """
-
-        u = rnd.random()
-        theta = ma.acos(1. - 2 * u)
-        phi = rnd.uniform(min_th, max_th)
-
-        return r, theta, phi
-
-    def random_powerlaw(self, pwr, min_bnd, max_bnd, nsample=1):
-        """function to randomly generate a number from the continuous
-        bounded distribution of 
-        
-                      f(x) = c * x**pwr.
-                      
-        Auto-scaled. Random seed. 
-        
-        Parameters:
-        -----------
-        pwr: real numbered !=-1; used as exponent
-        min_bnd: lower bound of the distribution to sample from.
-        max_bnd: upper bound of the distribution to sample from.
-        nsample: number of values to be generated.
-        
-        Returns:
-        --------
-        Result: randomly generated number or numbers.
-        
-        """
-        u = np.random.random(nsample)
-        if pwr != -1:
-            pwr1 = pwr + 1.
-            pwr2 = 1. / pwr1
-            norm = pwr1 / (max_bnd ** pwr2 - min_bnd ** pwr2)
-            r = (pwr2 * u / norm) - min_bnd ** pwr1
-            r = r ** pwr2
-        else:
-            norm = 1 / ma.log(max_bnd / min_bnd)
-            r = np.exp(u / norm) * min_bnd
-
-        return r
-
-
-class StatTools:
-    """
-    ==========================================================
-    Tools to perform statistical things
-    ==========================================================
-    """
-
-    def center_bins(self, dataArr, mode, binSize):
-        """
-        This module creates an array of bin sizes for a histogram, such that
-        the input mode of the distribution falls at the center of one of
-        the bin centers.
-
-        Parameters:
-        -----------
-        dataArr: (np.ndarr) Ddata that will be binned.
-        mode : (float) The calculated mode of the distribution or center point
-                        you want to have one of the bins centered around.
-        binSize: (float) Size of each bin.
-
-        Return:
-        -------
-        binArr: (np.ndarr) Array of bin edges. Does not return bin centers
-        In order to determine bin centers do:
-        binCenters = (binArr[:-1]+bin[1:])/2.
-        """
-        mn, mx = dataArr.min(), dataArr.max()
-        step = binSize
-        modei = mode
-        binArr = np.array([modei])
-        while modei < mx:
-            modei += step
-            binArr = np.append(binArr, modei)
-
-        modei = mode
-        while modei > mn:
-            modei -= step
-            binArr = np.append(binArr, modei)
-        # SORTS BINS MONOTONICALLY
-        binArr.sort()
-
-        binArr = binArr - step / 2
-
-        return binArr
-
-    def sigma_clip(self, array, sigma_clip, max_iter=None):
-        """
-        To sigma clip array. Returns indices in the array that are to
-        be kept and indices in original array that are discarded as well as
-        the mean and standard deviation of the final data set.
-
-        A multi-dimensional array can be fed in but it will do the sigma
-        clipping for only the first row in the array. This is to retain
-        the corresponding elemnts in the kept column in case other data
-        things are to be done on it.
-         """
-        arr = array
-
-        # GET LENGTH OF CORRECT ROW IN MATRIX
-
-        if arr.size > 0:  # checks to see if array is not empty
-
-            if len(arr.shape) > 1:
-                indArr = np.arange(len(arr[0])).astype('int')
-                arr_iter = arr[0]
-            else:
-                indArr = np.arange(len(arr)).astype('int')
-                arr_iter = arr
-
-            if max_iter is None:
-                max_iter = 20
-            else:
-                pass
-
-            iter = 0
-            arr_iter = arr
-
-            while iter < max_iter:
-
-                if arr.ndim < 2:
-                    iterMean, iterSigma = np.mean(arr_iter), np.std(arr_iter)
-                    indexGood = np.where(np.abs(arr_iter - iterMean) <= sigma_clip * iterSigma)[0]
-                    # try:
-                    #    indexBad  = np.where(np.abs(arr_iter-iterMean) > sigma_clip*iterSigma)[0]
-                    # except IndexError:
-                    #    print 'There were no bad ones found'
-
-                else:
-                    iterMean, iterSigma = np.mean(arr_iter[0]), np.std(arr_iter[0])
-                    indexGood = np.where(np.abs(arr_iter[0] - iterMean) <= sigma_clip * iterSigma)[0]
-                    # try:
-                    #    indexBad  = np.where(np.abs(arr_iter[0]-iterMean) > sigma_clip*iterSigma)[0]
-                    # except IndexError:
-                    #    print 'There were no bad ones found'
-                # print iter
-                #
-
-                arr_iter = arr_iter[:, indexGood]
-                iter += 1
-        else:
-            arr_iter, iterMean, iterSigma = arr, -1, -1
-
-        return [arr_iter, iterMean, iterSigma]
-
-    def LOST(self, array, dSr, dOs, sigma_clip=None, weighted=False, max_iter=15):
-        """DEPRACATED!!!! DO NOT USE!
-
-           LOST: Locally Optimized Sigma Trimming. This module performs a sigma-clipping
-           routine on a dataset along one axis while performing statistics on another in a
-           smoothed subsectional iterative fashion.
-
-           Parameters:
-           ----------
-           array: Two or more dimensional numpy array with data points to be trimmed. The
-                     first row is the x-axis data points, while the second row is the y-axis
-                     data points. Any additional dimensions can be added (e.g. error data),
-                     but the data used will be the first and second rows. (numpy ndarray)
-                     e.g. arrary = np.array([ [x1,x2,...,xn],
-                                              [y1,y2,...,yn],
-                                              [dx1,dx2,...dxn],..[...] ]) <-- possibly weights
-            dSr: size of subtraction subsection (float)
-            dOs: size of optimization subsection (float)
-            sigma_clip: number of standard deviations past which to clip data (float)
-            max_iter: maximum number of iterations of the sigma trim to perform. Each time
-                      it's a reduced version of the preceding trimmed data.
-            weighted: boolean and that sets statistical values (mean) to be calculated using
-                      weights based on y-errors. These will be extracted out of "array". The routine
-                      will look for it in the third axis.
-
-           The routine clips the data based on the std and mean calculated for the data
-           along the y-axis within the optimization subsection dOs along the x-axis and
-           removes data with abs(y-axis -mean) values that are > sigma_clip*std.
-           This is performed along the entire x-axis and saved as a new data array. The
-           new data array is then used for the next iteration. Wash, rinse and repeat until
-           max_iter times.
-
-           The subtraction subsection (Sr) < optimization subsection (Os). Sr is stepped through the x-
-           axis with a width dSr. Os is placed around Sr with width dOs such that Sr is in the middle of  
-           Os. For the case when this configuration is not possible (i.e. the boundaries of the x-axis 
-           data), Sr is placed at the left or right edge of Os.
-
-           Return:
-           ---------
-           mdata: A reduced numpy data array of the original input clipped to perfection.
-                     Smoothly clipped.
-
-
-
-         """
-        MData = array.copy()
-        ##Width of optimization subsection and width of
-        ##subtraction subsection
-
-        dSr, dOs = dSr, dOs
-        # GET LENGTH OF CORRECT ROW IN MATRIX
-        if sigma_clip is None:
-            sigma_clip = 1
-        else:
-            pass
-        runMeanOut = []
-        runStdOut = []
-        sriOut = []
-        runStdN = []
-        iter = 0
-        # ENTER ITERATION LOOP
-        while iter < max_iter:
-            dataKeep = np.array([])
-            sri = MData[0].min()
-            sri_1 = float(sri + dSr)
-
-            while sri <= MData[0].max():
-                # opti = (sri+dSr/2.) - dOs/2.
-                opti = float(sri + 0.5 * (dSr - dOs))
-                opti_1 = float(opti + dOs)
-                # =====================================
-                #   This takes care of boundary
-                # =====================================
-                if opti <= MData[0].min():
-                    opti, opti_1 = sri, sri + dOs
-                elif opti_1 >= MData[0].max():
-                    opti_1, opti = sri_1, sri_1 - dOs
-                else:
-                    pass
-                # =====================================
-
-                # CREATE OPTIMIZATION SUBSECTION
-                Opt_ind = np.where((MData[0] >= opti) & (MData[0] <= opti_1))[0]
-                arr_Opt = MData[:, Opt_ind]  # USE arr_Opt now
-
-                # DO SOEMTHING HERE IN CASE ARR_OPT IS ZERO
-                if (arr_Opt.size > 0) and (len(arr_Opt[0]) >= 1):
-
-                    if weighted:
-                        OptMean = np.average(arr_Opt[1], weights=1. / arr_Opt[2])
-                    else:
-                        OptMean = np.average(arr_Opt[1])
-                    OptSigma = np.std(arr_Opt[1])
-                    indExclude = np.where((arr_Opt[0] >= sri) & (arr_Opt[0] <= sri_1) &
-                                          (np.abs(arr_Opt[1] - OptMean) >= sigma_clip * OptSigma)
-                                          )[0]
-
-                    if len(indExclude) != 0:  # THERE ARE THINGS TO EXCLUDE
-                        mask = np.in1d(np.arange(len(arr_Opt[1])), indExclude)
-                        indKeep = np.where(mask == False)[0]
-                        arr_keep = arr_Opt[:, indKeep]
-                        indkeepSub = np.where((arr_keep[0] >= sri) & (arr_keep[0] <= sri_1))[0]
-
-                        if len(indkeepSub) != 0:  # THERE ARE THINGS TO KEEP
-                            ##THIS KEEPS ONLY THOSE STARS THAT ARE IN THE SUBSECTION
-                            if len(dataKeep) == 0:
-                                dataKeep = np.array(arr_keep[:, indkeepSub])
-                            else:
-                                dataKeep = np.append(dataKeep, arr_keep[:, indkeepSub], axis=1)
-                        else:
-                            pass
-
-                    else:  # THERE IS NOTHING TO EXCLUDE
-                        indkeepSub = np.where((arr_Opt[0] >= sri) & (arr_Opt[0] <= sri_1))[0]
-                        if len(dataKeep) == 0:
-                            dataKeep = np.array(arr_Opt[:, indkeepSub])
-                        else:
-                            dataKeep = np.append(dataKeep, arr_Opt[:, indkeepSub], axis=1)
-
-                    if iter == (max_iter - 1):  # THE LAST ITERATION
-                        # print 'indkeep',indkeepSub
-                        if len(indkeepSub) != 0:
-                            if weighted:
-                                OptMean = np.average(arr_Opt[1][indkeepSub], weights=1. / arr_Opt[2][indkeepSub])
-                            else:
-                                OptMean = np.average(arr_Opt[1][indkeepSub])
-                            OptSigma = np.std(arr_Opt[1])  # STANDARD DEVIATION OF DISTRIBUTION
-                            runStdN.append(OptSigma / ma.sqrt(len(indkeepSub)))
-                            runMeanOut.append(OptMean)
-                            runStdOut.append(OptSigma)
-                            sriOut.append(
-                                sri + abs(sri - sri_1) / 2.)  # NOT SURE WHICH IT SHOULD BE -- BEGINNING, MIDDLE OR END
-                        else:
-                            pass
-                    else:
-                        pass
-                else:
-                    pass
-
-                sri = sri_1
-                sri_1 = sri + dSr
-
-            iter += 1
-            MData = dataKeep
-        #
-        return (MData, sriOut, runMeanOut, runStdOut, runStdN)
-
-    def mode2(self, ndarray, axis=0):
-        """
-        Taken from https://stackoverflow.com/questions/16330831/most-efficient-way-to-find-mode-in-numpy-array
-        User: devdev, created on 2/27/2016
-
-        Parameters
-        ----------
-        axis
-
-        Returns
-        -------
-
-        """
-
-        # Check inputs
-        ndarray = numpy.asarray(ndarray)
-        ndim = ndarray.ndim
-        if ndarray.size == 1:
-            return (ndarray[0], 1)
-        elif ndarray.size == 0:
-            raise Exception('Cannot compute mode on empty array')
-        try:
-            axis = list(range(ndarray.ndim))[axis]
-        except:
-            raise Exception('Axis "{}" incompatible with the {}-dimension array'.format(axis, ndim))
-
-        # If array is 1-D and numpy version is > 1.9 numpy.unique will suffice
-        if all([ndim == 1,
-                int(numpy.__version__.split('.')[0]) >= 1,
-                int(numpy.__version__.split('.')[1]) >= 9]):
-            modals, counts = numpy.unique(ndarray, return_counts=True)
-            index = numpy.argmax(counts)
-            return modals[index], counts[index]
-
-        # Sort array
-        sort = numpy.sort(ndarray, axis=axis)
-        # Create array to transpose along the axis and get padding shape
-        transpose = numpy.roll(numpy.arange(ndim)[::-1], axis)
-        shape = list(sort.shape)
-        shape[axis] = 1
-        # Create a boolean array along strides of unique values
-        strides = numpy.concatenate([numpy.zeros(shape=shape, dtype='bool'),
-                                     numpy.diff(sort, axis=axis) == 0,
-                                     numpy.zeros(shape=shape, dtype='bool')],
-                                    axis=axis).transpose(transpose).ravel()
-        # Count the stride lengths
-        counts = numpy.cumsum(strides)
-        counts[~strides] = numpy.concatenate([[0], numpy.diff(counts[~strides])])
-        counts[strides] = 0
-        # Get shape of padded counts and slice to return to the original shape
-        shape = numpy.array(sort.shape)
-        shape[axis] += 1
-        shape = shape[transpose]
-        slices = [slice(None)] * ndim
-        slices[axis] = slice(1, None)
-        # Reshape and compute final counts
-        counts = counts.reshape(shape).transpose(transpose)[slices] + 1
-
-        # Find maximum counts and return modals/counts
-        slices = [slice(None, i) for i in sort.shape]
-        del slices[axis]
-        index = numpy.ogrid[slices]
-        index.insert(axis, numpy.argmax(counts, axis=axis))
-        return sort[index], counts[index]
-
-    def creep_mean(self, MData, dOs=None, dSr=None, smoothed=False,
-                   XLimits=[False, False], frac=0.1, hipNames=None):
-        from scipy.stats import mode
-
-        Data = MData.copy()
-        vecx, vecy = Data[0], Data[1]
-        try:
-            vecyerr = Data[2]
-        except:
-            vecyerr = None
-        XLimts = XLimits
-        meanArr, medianArr, xArr, StdArr, SEMArr, modeArr = [], [], [], [], [], []
-        xCore, yCore = [], []
-        xAllRegion, yAllRegion = [], []
-        boundaries = []
-        IDAllRegion = []
-        IDCore = []
-        wise_errAll = []
-        wise_errCore = []
-        if hipNames is not None:
-            ID = hipNames
-        else:
-            ID = np.chararray(len(vecx))
-            ID[:] = 'stella'
-        # ==========================================================
-        # CHECK LIMITS. IF NONE ARE GIVEN USE DATA MIN MAX
-        # ==========================================================
-        if XLimits[0] == False:
-            XLimits[0] = vecx.min()
-        if XLimits[1] == False:
-            XLimits[1] = vecx.max()
-        # ==========================================================
-        # pdb.set_trace()
-        x0, xf = XLimits
-        if xf > vecx.max():
-            xf = vecx.max()
-
-        if smoothed:
-            if dSr is not None and dOs is not None:
-                x0i, xfi = x0, x0 + dOs
-            elif dSr is None or dOs is None:
-                sys.exit('No Subsection provided.')
-            else:
-                pass
-        elif not smoothed:
-            if dOs is not None and dSr is None:
-                dSr = dOs
-                x0i, xfi = x0, x0 + dOs
-            elif dOs is None and dSr is not None:
-                sys.exit('No Large Subsection Provided.')
-            elif dOs is None and dSr is None:
-                x0i, xfi = x0, xf
-                dSr = 1
-            else:
-                pass
-
-        while xfi <= xf:
-            # pdb.set_trace()
-            if xfi == xf:  # invoked if region_i right boundary == limit to include edge points.
-
-                print('at the end point')
-                ind_regi = np.where((vecx >= x0i) & (vecx <= xfi))[0]
-            else:  # otherwise dont' include right points
-                ind_regi = np.where((vecx >= x0i) & (vecx < xfi))[0]
-            if len(ind_regi) != 0:
-                veciy, vecix, IDi = vecy[ind_regi], vecx[ind_regi], ID[ind_regi]
-                if vecyerr is None:
-                    veciyerr = np.ones(len(ind_regi))
-                else:
-                    veciyerr = vecyerr[ind_regi]
-
-                xAllRegion.append(list(vecix))
-                yAllRegion.append(list(veciy))
-                wise_errAll.append(list(veciyerr))
-                IDAllRegion.append(list(ID[ind_regi]))
-                ind_reginew = ind_regi
-
-                merged = np.array([veciy, vecix, veciyerr, ind_reginew]).transpose()
-                sortedMerged = np.array(sorted(merged, key=operator.itemgetter(0)))
-                veciy, vecix, veciyerr, ind_reginew = sortedMerged[:, 0], sortedMerged[:, 1], \
-                                                      sortedMerged[:, 2], sortedMerged[:, 3]
-
-                meani, mediani = np.average(veciy, weights=1. / veciyerr), np.median(veciy)
-                check = abs((meani - mediani) / meani)
-
-                i = 0
-                # if vecix.min()>=-.03 and vecix.max()<=0.068:
-                #    pdb.set_trace()
-                Ntot = int(frac * len(veciy))
-
-                while i < Ntot:
-                    minVeciy, maxVeciy = abs(veciy[0] - meani), abs(veciy[-1] - meani)
-
-                    if minVeciy > maxVeciy:
-                        ind_reginew = ind_reginew[1:]
-                        veciy = veciy[1:]
-                        vecix = vecix[1:]
-                        veciyerr = veciyerr[1:]
-                    elif maxVeciy >= minVeciy:
-                        ind_reginew = ind_reginew[:-1]
-                        veciy = veciy[:-1]
-                        vecix = vecix[:-1]
-                        veciyerr = veciyerr[:-1]
-                    # elif maxVeciy == minVeciy:
-                    #    print veciy[0],vecix[-1],meani,'here is your problem'
-                    else:
-                        print('nothing was removed', meani)
-
-                    # meani, mediani = np.mean(veciy), np.median(veciy)
-                    meani, mediani = np.average(veciy, weights=1. / veciyerr), np.median(veciy)
-                    check = abs((meani - mediani) / meani)
-                    i += 1
-
-                modei = self.mode2(veciy)[0]
-                sigmaiy = np.std(veciy)
-                StdArr.append(sigmaiy)
-                semi = sigmaiy / ma.sqrt(len(veciy))
-                SEMArr.append(semi)
-                meanArr.append(meani)
-                modeArr.append(modei)
-                medianArr.append(mediani)
-                xArr.append(x0i + 0.5 * abs(x0i - xfi))
-                xCore.append(list(vecix))
-                yCore.append(list(veciy))
-                wise_errCore.append(list(veciyerr))
-                IDCore.append(list(ID[ind_reginew.astype('int32')]))
-
-            else:
-                pass
-            # boundaries.append({'i':x0i,'f':xfi,'std':sigmaiy,'sem':semi,'median':mediani,'mean':meani})
-            x0i += dSr
-            xfi += dSr
-            # print(x0i, xfi, xf)
-
-        # pdb.set_trace()
-        # THIS NEXT SECTION TO GIVE REGIONS BEFORE 0.5(XFI-X0I) and after
-        # THEIR OWN ESTIMAT EOF THE RUNNING CREEPING MEAN
-        if smoothed:
-            xlow_fill, xhi_fill = xArr[0] - dSr, xArr[-1] + dSr
-            while xhi_fill < xf:
-                meanArr.append(meanArr[-1])
-                modeArr.append(modeArr[-1])
-                medianArr.append(medianArr[-1])
-                StdArr.append(StdArr[-1])
-                SEMArr.append(SEMArr[-1])
-                xArr.append(xhi_fill)
-                xhi_fill += dSr
-
-            while xlow_fill > x0:
-                modeArr.append(modeArr[0])
-                meanArr.append(meanArr[0])
-                medianArr.append(medianArr[0])
-                StdArr.append(StdArr[0])
-                SEMArr.append(SEMArr[0])
-                xArr.append(xlow_fill)
-                xlow_fill -= dSr
-
-        return [np.array(xArr), np.array(meanArr), np.array(medianArr), \
-                np.array(StdArr), np.array(SEMArr), xCore, yCore, wise_errCore, \
-                xAllRegion, yAllRegion, wise_errAll, boundaries, IDAllRegion, IDCore, np.array(modeArr)]
-
-    def creep_mean_iter(self, MData, dOs=None, dSr=None, smoothed=False,
-                        XLimits=[False, False], NpointStop=20):
-        """Calculates the creeping mean with different rejection rates
-        in each bin in x-space depending on the last N number of points rejected
-        to see how many positive/negative outliers there are. each bin will have
-        a different rejection criteria.
-
-        This subroutine has been removed from service. It might work great when only
-        dealing with ONE bin. But when using multiiple bins, the current convergence
-        criteria is insufficient."""
-
-        print()
-        'updated'
-        Data = MData.copy()
-        vecx, vecy = Data[0], Data[1]
-        try:
-            vecyerr = Data[2]
-        except:
-            vecyerr = None
-        XLimts = XLimits
-        meanArr, medianArr, xArr, StdArr, SEMArr = [], [], [], [], []
-        xCore, yCore = [], []
-        xAllRegion, yAllRegion = [], []
-        boundaries = []
-        fracArr = {}
-        # ==========================================================
-        # CHECK LIMITS. IF NONE ARE GIVEN USE DATA MIN MAX
-        # ==========================================================
-        if XLimits[0] == False:
-            XLimits[0] = vecx.min()
-        if XLimits[1] == False:
-            XLimits[1] = vecx.max()
-        # ==========================================================
-        x0, xf = XLimits
-        if xf > vecx.max():
-            xf = vecx.max()
-
-        if smoothed:
-            if dSr is not None and dOs is not None:
-                x0i, xfi = x0, x0 + dOs
-            elif dSr is None or dOs is None:
-                sys.exit('No Subsection provided.')
-            else:
-                pass
-        elif not smoothed:
-            if dOs is not None and dSr is None:
-                dSr = dOs
-                x0i, xfi = x0, x0 + dOs
-            elif dOs is None and dSr is not None:
-                sys.exit('No Large Subsection Provided.')
-            elif dOs is None and dSr is None:
-                x0i, xfi = x0, xf
-                dSr = 1
-            else:
-                pass
-
-        while xfi <= xf:
-
-            if xfi == xf:  # invoked if region_i right boundary == limit to include edge points.
-                print()
-                'at the end point'
-                ind_regi = np.where((vecx >= x0i) & (vecx <= xfi))[0]
-            else:  # otherwise dont' include right points
-                ind_regi = np.where((vecx >= x0i) & (vecx < xfi))[0]
-            if len(ind_regi) != 0:
-                veciy, vecix = vecy[ind_regi], vecx[ind_regi]
-                if vecyerr is None:
-                    veciyerr = np.ones(len(ind_regi))
-                else:
-                    veciyerr = vecyerr[ind_regi]
-
-                xAllRegion.append(vecix)
-                yAllRegion.append(veciy)
-
-                merged = np.array([veciy, vecix, veciyerr]).transpose()
-                sortedMerged = np.array(sorted(merged, key=operator.itemgetter(0)))
-                veciy, vecix, veciyerr = sortedMerged[:, 0], sortedMerged[:, 1], sortedMerged[:, 2]
-                # meani, mediani = np.average(veciy,weights=1./veciyerr),np.median(veciy)
-
-                meani, mediani = np.average(veciy), np.median(veciy)
-                check = abs((meani - mediani) / meani)
-                i = 0
-
-                Ntot = len(veciy)  # int(frac*len(veciy))
-                # RESET ARRAY TO STORE LAST NpointStop DEVIATIONS FROM CALCULATED MEAN
-                devArr = np.zeros(NpointStop)
-
-                Npos, Nneg = 0, 1
-                frac_pos = 0.0
-                frac_neg = 0.0
-                Nstop = int(NpointStop / 2.)
-                veciy0 = veciy
-                for i in range(len(veciy0)):
-
-                    if ((frac_pos >= 0.8 and frac_pos <= 1.) and (frac_neg <= 1. and frac_neg >= 0.8)) or (
-                            float(i) / Ntot) >= 0.5:
-                        break
-
-                    minVeciy, maxVeciy = abs(veciy[0] - meani), abs(veciy[-1] - meani)
-
-                    if minVeciy > maxVeciy:
-                        # REMOVES POSITIVE DEVIATION STAR
-                        devArr = np.append(veciy[0] - meani, devArr[:-1])
-                        veciy = veciy[1:]
-                        vecix = vecix[1:]
-
-                    elif maxVeciy >= minVeciy:
-                        # REMOVES NEGATIVE DEVIATION STAR
-                        devArr = np.append(veciy[-1] - meani, devArr[:-1])
-                        veciy = veciy[:-1]
-                        vecix = vecix[:-1]
-
-                    else:
-                        print()
-                        'nothing was removed', meani
-
-                    if float(i) / Ntot >= 0.30 and i > NpointStop:
-                        # if i>NpointStop :
-                        Npos = len(np.where(devArr > 0)[0])
-                        Nneg = len(np.where(devArr < 0)[0])
-
-                        frac_pos = float(Npos) / Nstop
-                        frac_neg = float(Nneg) / Nstop
-
-                    meani, mediani = np.mean(veciy), np.median(veciy)
-                    check = abs((meani - mediani) / meani)
-
-                fracArr[str(x0i + 0.5 * abs(x0i - xfi))] = (float(i) / Ntot)
-                sigmaiy = np.std(veciy)
-                StdArr.append(sigmaiy)
-                semi = sigmaiy / ma.sqrt(len(veciy))
-                SEMArr.append(semi)
-                meanArr.append(meani)
-                medianArr.append(mediani)
-                print()
-                '{0:.2f} {1:3d} {2:3d} {3:.2f} {4:3d} {5:3d}'.format(x0i + 0.5 * abs(x0i - xfi),
-                                                                     len(np.where(devArr > 0)[0]),
-                                                                     len(np.where(devArr < 0)[0]), meani,
-                                                                     len(veciy), len(veciy0))
-                xArr.append(x0i + 0.5 * abs(x0i - xfi))
-                xCore.append(vecix)
-                yCore.append(veciy)
-            else:
-                pass
-
-            x0i += dSr
-            xfi += dSr
-
-        # THIS NEXT SECTION TO GIVE REGIONS BEFORE 0.5(XFI-X0I) and after
-        # THEIR OWN ESTIMAT EOF THE RUNNING CREEPING MEAN
-        if smoothed:
-            # pdb.set_trace()
-            xlow_fill, xhi_fill = xArr[0] - dSr, xArr[-1] + dSr
-            while xhi_fill < xf:
-                meanArr.append(meanArr[-1])
-                medianArr.append(medianArr[-1])
-                StdArr.append(StdArr[-1])
-                SEMArr.append(SEMArr[-1])
-                xArr.append(xhi_fill)
-                xhi_fill += dSr
-
-            while xlow_fill > x0:
-                meanArr.append(meanArr[0])
-                medianArr.append(medianArr[0])
-                StdArr.append(StdArr[0])
-                SEMArr.append(SEMArr[0])
-                xArr.append(xlow_fill)
-                xlow_fill -= dSr
-        return [np.array(xArr), np.array(meanArr), np.array(medianArr), \
-                np.array(StdArr), np.array(SEMArr), xCore, yCore, \
-                xAllRegion, yAllRegion, boundaries, fracArr]
-
-    def pca_bbones(self, data_in, xlim=(-1.5, 1.5), ylim=(-1.5, 1.5)):
-
-        deg = 1
-        # ind = np.where( (data_in[0]>xlim[0]) & (data_in[1]<xlim[1]) & (data_in[1]>ylim[0]) & (data_in[1]<ylim[1]) )[0]
-        ind = np.where((data_in[0] < 2) & \
-                       (data_in[1] < 2))[0]
-
-        xdat_lim, ydat_lim = data_in[0][ind], data_in[1][ind]
-        xdat_lim, ydat_lim = data_in[0], data_in[1]
-        pfit = np.polyfit(xdat_lim, ydat_lim, deg)
-        ffit = np.poly1d(pfit)
-
-        x1, x2 = -1., 1.
-        y1, y2 = ffit(x1), ffit(x2)
-        vec1 = np.array([x2 - x1, y2 - y1])
-        u1 = vec1 / np.linalg.norm(vec1)
-        print()
-        u1
-        dataT = data_in.transpose()
-        newx = np.dot(dataT, u1)
-
-        figc = plt.figure()
-        axc = figc.add_subplot(111)
-        xtest = np.array([xdat_lim.min(), xdat_lim.max()])
-        ytest = ffit(xtest)
-        binsx, binsy = np.arange(data_in[0].min(), data_in[0].max(), 0.1), np.arange(data_in[1].min(), data_in[1].max(),
-                                                                                     0.1),
-        axc.hist2d(data_in[0], data_in[1], bins=[binsx, binsy], cmap='Greys', norm=LogNorm())
-        axc.hist2d(xdat_lim, ydat_lim, bins=[binsx, binsy], cmap='Greens', norm=LogNorm())
-        # axc.plot(data_in[0],data_in[1],'k.',ms=2)
-        # axc.plot(xdat_lim,ydat_lim,'g.',ms=1)
-        axc.plot(xtest, ytest, 'r-')
-        plt.show()
-
-        return newx
-
-    def PCA(self, data, lim=False, xlim=(-100, 2), ylim=(-100, 2)):
-
-        raw_data = data  # input data as column (star) x row (x,y,z data)
-        raw_data = np.asarray(raw_data)
-
-        if not lim:
-            raw_data_use = raw_data
-        else:
-            # ind = np.where((raw_data[0]>=xlim[0]) & (raw_data[0]<=xlim[1]) &\
-            #                (raw_data[1]>=ylim[0]) & (raw_data[1]<=ylim[1]) )[0]
-            ind = np.where((raw_data[0] < 1) & \
-                           (raw_data[1] < 1))[0]
-
-            raw_data_use = np.array([raw_data[0][ind], raw_data[1][ind]])
-            print()
-            len(raw_data_use), len(raw_data)
-        dat_dim = raw_data.shape  # (Ndim x Mstars)
-
-        mean_arr = []
-
-        # CALCULATE N-dim MEAN VECTOR
-
-        for i in range(dat_dim[0]):
-            mean_arr.append([np.mean(raw_data_use[i, :])])
-
-        # CALCULATE COVARIANCE MATRIX
-
-        self.cov_mat = np.cov(raw_data_use)
-
-        # CALCULATE EIGENVALUES AND EIGENVECTORS OF THE COVARIANCE MATRIX
-
-        eigVal, eigVec = np.linalg.eig(self.cov_mat)
-
-        # Make list of (eigVal and eigVec) pairs
-
-        self.eigPairs = [(np.abs(eigVal[i]), eigVec[:, i]) for i in range(len(eigVal))]
-
-        self.eigPairs.sort()
-        self.eigPairs.reverse()
-
-        # CREATE TRANSFORMATION MATRIX BASED ON ORDER OF EIGENVALUES
-
-        matrix_w = []
-        for i in range(dat_dim[0]):
-            matrix_w.append(self.eigPairs[i][1].reshape(dat_dim[0], 1))
-
-        self.matrix_w = np.hstack(matrix_w)
-
-        self.transformed_Data = self.matrix_w.T.dot(raw_data)
-
-        return [self.transformed_Data, self.eigPairs, self.matrix_w]
-
-    def silverman_bw(self, arr):
-        """
-        Calculate bandwidth to use to determine the probability distribution
-        using a kernel density estimation technique. The kernel, if this module
-        is used, is assumed to be a Gaussian.
-        
-        Input:
-        ------
-        arr: (np.array); 1-d array of distribution points
-        
-        Return:
-        -------
-        bw: (float); bandwidth for input distribution
-        """
-
-        var = np.std(arr)
-        N = len(arr)
-
-        bw = 1.06 * var * N ** (-1. / 5)
-        return bw
-
-
 class FittingTools:
     """
-    Fitting aids
+    A collection of utility functions for data fitting tasks.
     """
 
     def deviates_from_model(self, p0=None, fjac=True, x=None, y=None, err=None,
-                            func=None, logx=None, logy=None, loglog=None, **kwargs):
+                            func=None, logx=None, logy=None, loglog=None,
+                            **kwargs):
         """
-        Returns deviates calculated from input model function.
-        This is to be used by "mpfit.py" Levenberg-Marquardt technique;
-        same IDL code written for Python by Mark Rivers and Sergey
+        Returns the deviations (residuals) calculated from an input model function.
+        This method is intended to be used by the Levenberg-Marquardt technique in the
+        "mpfit.py" module, originally written in IDL by Mark Rivers and Sergey
         Koposov.
 
         Args:
-            p0 (list) parameters to be fit
-            fjac: partial derivate calculation flag. See MPFIT.py
-            x,y,err: (numpy arr) observational data
-            func: (object) full name of function that will be called to
-                  execute model calculations.
-            kwargs: additional items to be passed to model function.
+            p0 (list): Initial parameters for the model to be fit.
+            fjac (bool): Flag for partial derivative calculation. Refer to
+                MPFIT.py for details.
+            x (numpy.ndarray): Input x data (independent variable).
+            y (numpy.ndarray): Input y data (dependent variable).
+            err (numpy.ndarray, optional): Uncertainty in the y data.
+            func (callable): The model function that calculates y from x and
+                parameters.
+            logx (bool, optional): Flag for applying a logarithmic
+                transformation to x.
+            logy (bool, optional): Flag for applying a logarithmic
+                transformation to y.
+            loglog (bool, optional): Flag for applying a logarithmic
+                transformation to both x and y.
+            **kwargs: Additional parameters to pass to the model function.
 
         Returns:
-            [status,residuals] : list
-            status: (int) status of fit, used by mpfit.py module
-            residuals: (np.ndarray) Either weighted or unweighted
-                        depending on error input
-         """
+            list: A list containing:
+                - status (int): Status of the fit, used by the MPFIT.py module.
+                - residuals (numpy.ndarray): The residuals, either weighted or unweighted depending on the error input.
+        """
         kwargs = kwargs
 
-        ##PARAMETERS CAN BE EITHER EXPLICITLY STATED OR WITHIN KWARGS.
-        ##IF USING MPFIT, PARAMETERS CALLED VIA PARINFO ARE IN KWARGS.
-        ##OTHERWISE, THEY WILL BE EXPLICIT. EITHER WAY, THEY NEED TO BE EXPLICITLY
-        ##PASSED TO THE FUNCTION.
+        # PARAMETERS CAN BE EITHER EXPLICITLY STATED OR WITHIN KWARGS.
+        # IF USING MPFIT, PARAMETERS CALLED VIA PARINFO ARE IN KWARGS.
+        # OTHERWISE, THEY WILL BE EXPLICIT. EITHER WAY, THEY NEED TO BE EXPLICITLY
+        # PASSED TO THE FUNCTION.
         if p0 is not None:
             model = func(x, p0, **kwargs)
         else:
             try:
                 p0 = kwargs['p0']
                 model = func(x, p0, **kwargs)
-                print()
-                "Make sure you haven't called parameters twice."
-            except:
-                raise "No parameters were detected. Try again."
+                print("Make sure you haven't called parameters twice.")
+            except KeyError:
+                raise ValueError("No parameters were detected. Try again.")
 
         status = 0  # needed by mpfit
 
         #
         if err is not None:
-            return ([status, (y - model) / (err)])
+            return ([status, (y - model) / err])
         else:
-            return ([status, (y - model)])
+            return ([status, y - model])
 
     def poly_nfit(self, x, p):
-        """Module to determine the sampling of points for
-        a polynomial whose order is determined by the length
-        of the input paramter array.
-
-        Input:
-        ---------
-        x : (array) vector of sampling points
-        p : (array) vector of order parameters in polynomial
-
-        Return:
-        ---------
-        y: (array) sampled values of the function.
-
-        p = [a0,a1,...,an]
-        such that y = a0 + a1*x + a2*x**2 + ... + an*x**n
         """
-        # pdb.set_trace()
+        Determines the sampled values for a polynomial function whose order is
+            determined by the length of the input parameter array.
+
+        Args:
+            x (numpy.ndarray): Vector of sampling points.
+            p (numpy.ndarray): Vector of parameters for the polynomial (a0, a1, ..., an).
+
+        Returns:
+            numpy.ndarray: Sampled values of the polynomial function.
+        """
         x, p = np.asarray(x), np.asarray(p)
         x0, p0 = x.copy(), p.copy()
 
@@ -1582,19 +471,36 @@ class FittingTools:
         return y
 
     def get_InitParams(self, lenp):
-        """GETS YOU INTIIAL SET OF STARTING PARAMETERS FOR A FIT depending on
-        length of lenp, which is how many free parameters your fitting function
-        has. It is model independent and just retrieves non-zero values for p0
         """
-        p0Line = []
-        for i in range(lenp):
-            p0Line.append(0.1)
-        return p0Line
+        Generates an initial set of starting parameters for a fit, depending on
+            the number of free parameters in the model.
 
-    def print_poly(self, polyn, xlabel='x', ylabel='y(x)', numformat='%.3f', coeff=None):
-        """This subroutine prints out the string formatting for a poynomial
-        function of order N. A y and x label can also be passed. A string version
-        of the polynomial is returned with """
+        Args:
+            lenp (int): The number of free parameters in the model.
+
+        Returns:
+            list: A list of initial parameters, each set to 0.1.
+        """
+
+        return [0.1] * lenp
+
+    def print_poly(self, polyn, xlabel='x', ylabel='y(x)', numformat='%.3f',
+                   coeff=None):
+        """
+        Returns a formatted string for a polynomial function of order N,
+        including x and y labels. Optionally, the coefficients can be used to populate the polynomial's parameters.
+
+        Args:
+            polyn (int): The order of the polynomial.
+            xlabel (str, optional): Label for the x-axis. Defaults to 'x'.
+            ylabel (str, optional): Label for the y-axis. Defaults to 'y(x)'.
+            numformat (str, optional): String format for displaying the
+                coefficients. Defaults to '%.3f'.
+            coeff (list, optional): Coefficients for the polynomial.
+
+        Returns:
+            str: A string representation of the polynomial.
+        """
 
         sig = {-1: '-', 1: '+'}
         eqstr = r'$%s=' % ylabel
@@ -1616,41 +522,75 @@ class FittingTools:
 
             eqstr = eqstr % tuple(eqParams)
 
-
         else:
             pass
 
         return eqstr
 
-        # def Guass2d_circle_general(self,x,p0=None):
-        # """fits circular 2d gaussian with unmarked centers"""
-        # A,sigma,xcen,ycen = p0[0],p0[1],p0[2],p0[3]
-        # x0,y0 = x
-        # y = A * np.exp(-(
-
     def Gauss2d_circle(self, x, p0=None):
-        """Fits circular 2d gaussian centered at (0,0)"""
+        """
+        Fits a circular 2D Gaussian centered at (0, 0).
 
+        Args:
+            x (numpy.ndarray): The 2D data points (x, y).
+            p0 (list, optional): Parameters for the Gaussian model, including
+                amplitude and sigma.
+
+        Returns:
+            numpy.ndarray: The fitted Gaussian values.
+        """
         A, sigma = p0[0], p0[1]
         x0, y0 = x  # this assumes a 2d array
         y = A * np.exp(-(x0 ** 2 + y0 ** 2) / (2 * sigma ** 2))
 
         return y
 
-    def twoD_Gaussian(self, x, y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
-        """2D Gaussian taken from StackOverflow's users: ali_m (02/14) and 
-        Kokomoking."""
+    def twoD_Gaussian(self, x, y, amplitude, xo, yo, sigma_x, sigma_y, theta,
+                      offset):
+        """
+        2D Gaussian function for modeling data, adapted from StackOverflow users ali_m and Kokomoking.
+
+        Args:
+            x (numpy.ndarray): The x-coordinate data.
+            y (numpy.ndarray): The y-coordinate data.
+            amplitude (float): The amplitude of the Gaussian.
+            xo (float): The x-coordinate of the center.
+            yo (float): The y-coordinate of the center.
+            sigma_x (float): The standard deviation along the x-axis.
+            sigma_y (float): The standard deviation along the y-axis.
+            theta (float): The rotation angle of the Gaussian.
+            offset (float): The offset value.
+
+        Returns:
+            numpy.ndarray: The 2D Gaussian values at the specified coordinates.
+        """
 
         xo = float(xo)
         yo = float(yo)
-        a = (np.cos(theta) ** 2) / (2 * sigma_x ** 2) + (np.sin(theta) ** 2) / (2 * sigma_y ** 2)
-        b = -(np.sin(2 * theta)) / (4 * sigma_x ** 2) + (np.sin(2 * theta)) / (4 * sigma_y ** 2)
-        c = (np.sin(theta) ** 2) / (2 * sigma_x ** 2) + (np.cos(theta) ** 2) / (2 * sigma_y ** 2)
-        g = offset + amplitude * np.exp(- (a * ((x - xo) ** 2) + 2 * b * (x - xo) * (y - yo)
-                                           + c * ((y - yo) ** 2)))
+        a = (np.cos(theta) ** 2) / (2 * sigma_x ** 2) + (np.sin(theta) ** 2) / (
+                2 * sigma_y ** 2)
+        b = -(np.sin(2 * theta)) / (4 * sigma_x ** 2) + (np.sin(2 * theta)) / (
+                4 * sigma_y ** 2)
+        c = (np.sin(theta) ** 2) / (2 * sigma_x ** 2) + (np.cos(theta) ** 2) / (
+                2 * sigma_y ** 2)
+        g = offset + amplitude * np.exp(
+            - (a * ((x - xo) ** 2) + 2 * b * (x - xo) * (y - yo)
+               + c * ((y - yo) ** 2)))
+
         return g.ravel()
 
     def Gauss_fit(self, x, p0=None):
+        """
+        Fits a Gaussian function to the data.
+
+        Args:
+            x (numpy.ndarray): The input data.
+            p0 (list, optional): The parameters for the Gaussian (amplitude, mean, sigma).
+
+        Returns:
+            numpy.ndarray: The fitted Gaussian values.
+        """
+
         A, mu, sigma = p0[0], p0[1], p0[2]
         x0 = x
         # y = (A/(sigma*ma.sqrt(2*ma.pi)))*np.exp(-1/2.*((x-mu)/sigma)**2)
@@ -1659,34 +599,53 @@ class FittingTools:
         return y
 
     def exp_fit(self, x, A, b, c):
-        """ y= A * exp(b*x) + c"""
+        """
+         Fits an exponential function to the data.
 
+         Args:
+            x (numpy.ndarray): The input data.
+            A (float): The amplitude.
+            b (float): The rate constant.
+            c (float): The offset.
+
+         Returns:
+            numpy.ndarray: The fitted exponential values.
+         """
         x0 = x
         return A * np.exp(b * x0) + c
 
         return y
 
     def erf_fit(self, x, p0=None):
+        """
+        Fits an error function to the data.
+
+        Args:
+            x (numpy.ndarray): The input data.
+            p0 (list, optional): Parameters for the error function
+                (amplitude, mean, sigma).
+
+        Returns:
+            numpy.ndarray: The fitted error function values.
+        """
+
         x = np.array(x)
         x0 = x.copy()
         A, mu, sigma = p0.copy()
-        y = 0.5 * A * (1. + scipy.special.erf((ma.sqrt(2) / 2) * (x0 - mu) / sigma))
+        y = 0.5 * A * (1. + scipy.special.erf(
+            (ma.sqrt(2) / 2) * (x0 - mu) / sigma))
         return y
 
     def resample_spectrum(self, dataSet1, dataSet2, resample2lowR=False):
-        """Re-sample the input spectra to the same wavelenth (or frequency)
-        scale over their common range.
+        """
+        Resamples two input spectra to the same wavelength scale over their common range.
 
-        Input:
-        --------
-        dataSet1,2: tuple consisting of (lam,flux) where lam and flux are
-                    arrays of the same length with wavelength/frequency and
-                    corresponding flux information
-        resample2lowR: boolean that will resample the high R spectrum to the
-                       lower one
+        Args:
+            dataSet1, dataSet2 (tuple): Each containing (wavelength, flux) arrays.
+            resample2lowR (bool, optional): If True, resamples the high-resolution spectrum to the lower one.
 
-        Return:
-        ---------
+        Returns:
+            tuple: A tuple of resampled spectra.
         """
         lam1, flux1 = dataSet1
         lam2, flux2 = dataSet2
@@ -1711,7 +670,8 @@ class FittingTools:
         #
         if count1 < count2:
             if not resample2lowR:
-                ind = np.where((out_lam2 >= out_lam1.min()) & (out_lam2 <= out_lam1.max()))[0]
+                ind = np.where((out_lam2 >= out_lam1.min()) & (
+                        out_lam2 <= out_lam1.max()))[0]
                 out_lam2 = out_lam2[ind]
                 out_flx2 = out_flx2[ind]
 
@@ -1720,7 +680,8 @@ class FittingTools:
                 out_flx1 = int_flx1
                 out_lam1 = out_lam2
             else:  # THIS IS LESS RELIABLE AND UNTESTED -- QUADRATIC PART
-                ind = np.where((out_lam1 >= out_lam2.min()) & (out_lam1 <= out_lam2.max()))[0]
+                ind = np.where((out_lam1 >= out_lam2.min()) & (
+                        out_lam1 <= out_lam2.max()))[0]
                 out_lam1 = out_lam1[ind]
                 out_flx1 = out_flx1[ind]
                 ipolate = intp.interp1d(out_lam2, out_flx2, kind='quadratic')
@@ -1730,7 +691,8 @@ class FittingTools:
         else:
             if not resample2lowR:
 
-                ind = np.where((out_lam1 >= out_lam2.min()) & (out_lam1 <= out_lam2.max()))[0]
+                ind = np.where((out_lam1 >= out_lam2.min()) & (
+                        out_lam1 <= out_lam2.max()))[0]
                 out_lam1 = out_lam1[ind]
                 out_flx1 = out_flx1[ind]
                 ipolate = intp.interp1d(out_lam2, out_flx2)
@@ -1738,7 +700,8 @@ class FittingTools:
                 out_flx2 = int_flx2
                 out_lam2 = out_lam1
             else:  # THIS IS LESS RELIABLE AND UNTESTED -- QUADRATIC PART
-                ind = np.where((out_lam2 >= out_lam1.min()) & (out_lam2 <= out_lam1.max()))[0]
+                ind = np.where((out_lam2 >= out_lam1.min()) & (
+                        out_lam2 <= out_lam1.max()))[0]
                 out_lam2 = out_lam2[ind]
                 out_flx2 = out_flx2[ind]
                 ipolate = intp.interp1d(out_lam1, out_flx1, kind='quadratic')
@@ -1749,19 +712,21 @@ class FittingTools:
         return ((out_lam1, out_flx1), (out_lam2, out_flx2))
 
     def resample_model(self, lam, flx, start, end, maxdelta=100.0, pband=None):
-        """This will resample the input model spectrum to the specified resolution
+        """
+        This will resample the input model spectrum to the specified resolution
         between the wavelengths input. If a filter is given, information from the filter
         will be used to supplement the resampling.
-        Input:
-        --------
-        lam,flx: arrays of the wavelength and flux that should be resampled
-        start,end: wavelength bounds for which the resampling should be conducted
-        maxdelta: maximum difference between wavelegnths tolerated
-        pband: passband object
 
-        Return:
-        --------
-        resampled spectra
+        Args:
+            lam (arr): array of the wavelength (x-vals) for the spectrum to be resampled
+            flx (arr): array of the flux (y-vals) for the spectrum to be resampled
+            start,end (float): wavelength bounds for which the resampling should be conducted
+            maxdelta (float): maximum difference between wavelegnths tolerated
+            pband (obj): passband object
+
+        Returns:
+            resampled spectra
+
         """
 
         # pdb.set_trace()
@@ -1772,7 +737,8 @@ class FittingTools:
             for (sublam, subflx) in zip(lam, flx):
                 # search for maximum leftmost position in model grid between where filter profile begins
                 # and where the largest jump in resolution of model grid
-                ind1 = max(np.searchsorted(sublam, start), np.searchsorted(np.diff(sublam), maxdelta))
+                ind1 = max(np.searchsorted(sublam, start),
+                           np.searchsorted(np.diff(sublam), maxdelta))
                 # search for position of end of filter profile in model grid
                 ind2 = np.searchsorted(sublam, end) + 1
                 if ind1 > ind2:
@@ -1785,16 +751,21 @@ class FittingTools:
                     # Split to select array between in1:ind2
                     lams, lamm, laml = np.split(sublam, [ind1, ind2])
                     flxs, flxm, flxl = np.split(subflx, [ind1, ind2])
-                    model_interp = intp.interp1d(np.log10(sublam), np.log10(subflx))
+                    model_interp = intp.interp1d(np.log10(sublam),
+                                                 np.log10(subflx))
 
                     if pband is not None:
-                        indpb = np.where((pband.wavelength <= sublam[ind2]) & (pband.wavelength >= sublam[ind1]))[0]
-                        lamm = np.unique(np.append(lamm, pband.wavelength[indpb]))
+                        indpb = np.where((pband.wavelength <= sublam[ind2]) & (
+                                pband.wavelength >= sublam[ind1]))[0]
+                        lamm = np.unique(
+                            np.append(lamm, pband.wavelength[indpb]))
                         # 10 angstrom resolution
-                        lamm = np.linspace(lamm[0], lamm[-1], int(abs(lamm[-1] - lamm[0]) / 10.))
+                        lamm = np.linspace(lamm[0], lamm[-1],
+                                           int(abs(lamm[-1] - lamm[0]) / 10.))
 
                     else:
-                        lamm = np.linspace(lamm[0], lamm[-1], int(abs(lamm[-1] - lamm[0]) / 10.))
+                        lamm = np.linspace(lamm[0], lamm[-1],
+                                           int(abs(lamm[-1] - lamm[0]) / 10.))
 
                     new_model_flux = 10 ** model_interp(np.log10(lamm))
                     newsublam = reduce(np.append, [lams, lamm, laml])
@@ -1820,7 +791,8 @@ class FittingTools:
 
         else:
 
-            ind1 = max(np.searchsorted(lam, start), np.searchsorted(np.diff(lam), maxdelta))
+            ind1 = max(np.searchsorted(lam, start),
+                       np.searchsorted(np.diff(lam), maxdelta))
             ind2 = np.searchsorted(lam, end)
             if ind1 >= ind2:
                 newlam.append(lam)
@@ -1833,13 +805,16 @@ class FittingTools:
                 model_interp = intp.interp1d(np.log10(lam), np.log10(flx))
 
                 if pband is not None:
-                    indpb = np.where((pband.wavelength <= sublam[ind2]) & (pband.wavelength >= sublam[ind1]))[0]
+                    indpb = np.where((pband.wavelength <= sublam[ind2]) & (
+                            pband.wavelength >= sublam[ind1]))[0]
                     lamm = np.unique(np.append(lamm, pband.wavelength[indpb]))
                     # 10 angstrom resolution
-                    lamm = np.linspace(lamm[0], lamm[-1], int(abs(lamm[-1] - lamm[0]) / 10.))
+                    lamm = np.linspace(lamm[0], lamm[-1],
+                                       int(abs(lamm[-1] - lamm[0]) / 10.))
 
                 else:
-                    lamm = np.linspace(lamm[0], lamm[-1], int(abs(lamm[-1] - lamm[0]) / 10.))
+                    lamm = np.linspace(lamm[0], lamm[-1],
+                                       int(abs(lamm[-1] - lamm[0]) / 10.))
 
                 new_model_flux = 10 ** model_interp(np.log10(lamm))
 
@@ -1849,100 +824,97 @@ class FittingTools:
         return np.array(newlam), np.array(newflx)
 
 
-# =~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~
-# =~=~        NOW ENTERING DOMAIN OF MPFIT -- LEAST SQUARES MINIMIZATION ALGORITHM
-# =~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~
-"""
-Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
+class mpfit:
+    """
+    Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
-                                   AUTHORS
-  The original version of this software, called LMFIT, was written in FORTRAN
-  as part of the MINPACK-1 package by XXX.
+    AUTHORS
+    The original version of this software, called LMFIT, was written in FORTRAN
+    as part of the MINPACK-1 package by XXX.
 
-  Craig Markwardt converted the FORTRAN code to IDL.  The information for the
-  IDL version is:
-     Craig B. Markwardt, NASA/GSFC Code 662, Greenbelt, MD 20770
-     craigm@lheamail.gsfc.nasa.gov
-     UPDATED VERSIONs can be found on my WEB PAGE:
-        http://cow.physics.wisc.edu/~craigm/idl/idl.html
+    Craig Markwardt converted the FORTRAN code to IDL.  The information for the
+    IDL version is:
+    Craig B. Markwardt, NASA/GSFC Code 662, Greenbelt, MD 20770
+    craigm@lheamail.gsfc.nasa.gov
+    UPDATED VERSIONs can be found on my WEB PAGE:
+    http://cow.physics.wisc.edu/~craigm/idl/idl.html
 
-  Mark Rivers created this Python version from Craig's IDL version.
+    Mark Rivers created this Python version from Craig's IDL version.
     Mark Rivers, University of Chicago
     Building 434A, Argonne National Laboratory
     9700 South Cass Avenue, Argonne, IL 60439
     rivers@cars.uchicago.edu
     Updated versions can be found at http://cars.uchicago.edu/software
 
- Sergey Koposov converted the Mark's Python version from Numeric to numpy
+    Sergey Koposov converted the Mark's Python version from Numeric to numpy
     Sergey Koposov, University of Cambridge, Institute of Astronomy,
     Madingley road, CB3 0HA, Cambridge, UK
     koposov@ast.cam.ac.uk
     Updated versions can be found at http://code.google.com/p/astrolibpy/source/browse/trunk/
 
-                                 DESCRIPTION
+    DESCRIPTION
 
- MPFIT uses the Levenberg-Marquardt technique to solve the
- least-squares problem.  In its typical use, MPFIT will be used to
- fit a user-supplied function (the "model") to user-supplied data
- points (the "data") by adjusting a set of parameters.  MPFIT is
- based upon MINPACK-1 (LMDIF.F) by More' and collaborators.
+    MPFIT uses the Levenberg-Marquardt technique to solve the
+    least-squares problem.  In its typical use, MPFIT will be used to
+    fit a user-supplied function (the "model") to user-supplied data
+    points (the "data") by adjusting a set of parameters.  MPFIT is
+    based upon MINPACK-1 (LMDIF.F) by More' and collaborators.
 
- For example, a researcher may think that a set of observed data
- points is best modelled with a Gaussian curve.  A Gaussian curve is
- parameterized by its mean, standard deviation and normalization.
- MPFIT will, within certain constraints, find the set of parameters
- which best fits the data.  The fit is "best" in the least-squares
- sense; that is, the sum of the weighted squared differences between
- the model and data is minimized.
+    For example, a researcher may think that a set of observed data
+    points is best modelled with a Gaussian curve.  A Gaussian curve is
+    parameterized by its mean, standard deviation and normalization.
+    MPFIT will, within certain constraints, find the set of parameters
+    which best fits the data.  The fit is "best" in the least-squares
+    sense; that is, the sum of the weighted squared differences between
+    the model and data is minimized.
 
- The Levenberg-Marquardt technique is a particular strategy for
- iteratively searching for the best fit.  This particular
- implementation is drawn from MINPACK-1 (see NETLIB), and is much faster
- and more accurate than the version provided in the Scientific Python package
- in Scientific.Functions.LeastSquares.
- This version allows upper and lower bounding constraints to be placed on each
- parameter, or the parameter can be held fixed.
+    The Levenberg-Marquardt technique is a particular strategy for
+    iteratively searching for the best fit.  This particular
+    implementation is drawn from MINPACK-1 (see NETLIB), and is much faster
+    and more accurate than the version provided in the Scientific Python package
+    in Scientific.Functions.LeastSquares.
+    This version allows upper and lower bounding constraints to be placed on each
+    parameter, or the parameter can be held fixed.
 
- The user-supplied Python function should return an array of weighted
- deviations between model and data.  In a typical scientific problem
- the residuals should be weighted so that each deviate has a
- gaussian sigma of 1.0.  If X represents values of the independent
- variable, Y represents a measurement for each value of X, and ERR
- represents the error in the measurements, then the deviates could
- be calculated as follows:
+    The user-supplied Python function should return an array of weighted
+    deviations between model and data.  In a typical scientific problem
+    the residuals should be weighted so that each deviate has a
+    gaussian sigma of 1.0.  If X represents values of the independent
+    variable, Y represents a measurement for each value of X, and ERR
+    represents the error in the measurements, then the deviates could
+    be calculated as follows:
 
-   DEVIATES = (Y - F(X)) / ERR
+    DEVIATES = (Y - F(X)) / ERR
 
- where F is the analytical function representing the model.  You are
- recommended to use the convenience functions MPFITFUN and
- MPFITEXPR, which are driver functions that calculate the deviates
- for you.  If ERR are the 1-sigma uncertainties in Y, then
+    where F is the analytical function representing the model.  You are
+    recommended to use the convenience functions MPFITFUN and
+    MPFITEXPR, which are driver functions that calculate the deviates
+    for you.  If ERR are the 1-sigma uncertainties in Y, then
 
-   TOTAL( DEVIATES^2 )
+    TOTAL( DEVIATES^2 )
 
- will be the total chi-squared value.  MPFIT will minimize the
- chi-square value.  The values of X, Y and ERR are passed through
- MPFIT to the user-supplied function via the FUNCTKW keyword.
+    will be the total chi-squared value.  MPFIT will minimize the
+    chi-square value.  The values of X, Y and ERR are passed through
+    MPFIT to the user-supplied function via the FUNCTKW keyword.
 
- Simple constraints can be placed on parameter values by using the
- PARINFO keyword to MPFIT.  See below for a description of this
- keyword.
+    Simple constraints can be placed on parameter values by using the
+    PARINFO keyword to MPFIT.  See below for a description of this
+    keyword.
 
- MPFIT does not perform more general optimization tasks.  See TNMIN
- instead.  MPFIT is customized, based on MINPACK-1, to the
- least-squares minimization problem.
+    MPFIT does not perform more general optimization tasks.  See TNMIN
+    instead.  MPFIT is customized, based on MINPACK-1, to the
+    least-squares minimization problem.
 
+    USER FUNCTION
 
-                               USER FUNCTION
+    The user must define a function which returns the appropriate
+    values as specified above.  The function should return the weighted
+    deviations between the model and the data.  It should also return a status
+    flag and an optional partial derivative array.  For applications which
+    use finite-difference derivatives -- the default -- the user
+    function should be declared in the following way:
 
- The user must define a function which returns the appropriate
- values as specified above.  The function should return the weighted
- deviations between the model and the data.  It should also return a status
- flag and an optional partial derivative array.  For applications which
- use finite-difference derivatives -- the default -- the user
- function should be declared in the following way:
-
-   def myfunct(p, fjac=None, x=None, y=None, err=None)
+    def myfunct(p, fjac=None, x=None, y=None, err=None)
     # Parameter values are passed in "p"
     # If fjac==None then partial derivatives should not be
     # computed.  It will always be None if MPFIT is called with default
@@ -1953,501 +925,301 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
     status = 0
     return([status, (y-model)/err]
 
- See below for applications with analytical derivatives.
+    See below for applications with analytical derivatives.
 
- The keyword parameters X, Y, and ERR in the example above are
- suggestive but not required.  Any parameters can be passed to
- MYFUNCT by using the functkw keyword to MPFIT.  Use MPFITFUN and
- MPFITEXPR if you need ideas on how to do that.  The function *must*
- accept a parameter list, P.
+    The keyword parameters X, Y, and ERR in the example above are
+    suggestive but not required.  Any parameters can be passed to
+    MYFUNCT by using the functkw keyword to MPFIT.  Use MPFITFUN and
+    MPFITEXPR if you need ideas on how to do that.  The function *must*
+    accept a parameter list, P.
 
- In general there are no restrictions on the number of dimensions in
- X, Y or ERR.  However the deviates *must* be returned in a
- one-dimensional Numeric array of type Float.
+    In general there are no restrictions on the number of dimensions in
+    X, Y or ERR.  However the deviates *must* be returned in a
+    one-dimensional Numeric array of type Float.
 
- User functions may also indicate a fatal error condition using the
- status return described above. If status is set to a number between
- -15 and -1 then MPFIT will stop the calculation and return to the caller.
-
-
-                            ANALYTIC DERIVATIVES
-
- In the search for the best-fit solution, MPFIT by default
- calculates derivatives numerically via a finite difference
- approximation.  The user-supplied function need not calculate the
- derivatives explicitly.  However, if you desire to compute them
- analytically, then the AUTODERIVATIVE=0 keyword must be passed to MPFIT.
- As a practical matter, it is often sufficient and even faster to allow
- MPFIT to calculate the derivatives numerically, and so
- AUTODERIVATIVE=0 is not necessary.
-
- If AUTODERIVATIVE=0 is used then the user function must check the parameter
- FJAC, and if FJAC!=None then return the partial derivative array in the
- return list.
-   def myfunct(p, fjac=None, x=None, y=None, err=None)
-    # Parameter values are passed in "p"
-    # If FJAC!=None then partial derivatives must be comptuer.
-    # FJAC contains an array of len(p), where each entry
-    # is 1 if that parameter is free and 0 if it is fixed.
-    model = F(x, p)
-    Non-negative status value means MPFIT should continue, negative means
-    # stop the calculation.
-    status = 0
-    if (dojac):
-       pderiv = zeros([len(x), len(p)], Float)
-       for j in range(len(p)):
-         pderiv[:,j] = FGRAD(x, p, j)
-    else:
-       pderiv = None
-    return([status, (y-model)/err, pderiv]
-
- where FGRAD(x, p, i) is a user function which must compute the
- derivative of the model with respect to parameter P[i] at X.  When
- finite differencing is used for computing derivatives (ie, when
- AUTODERIVATIVE=1), or when MPFIT needs only the errors but not the
- derivatives the parameter FJAC=None.
-
- Derivatives should be returned in the PDERIV array. PDERIV should be an m x
- n array, where m is the number of data points and n is the number
- of parameters.  dp[i,j] is the derivative at the ith point with
- respect to the jth parameter.
-
- The derivatives with respect to fixed parameters are ignored; zero
- is an appropriate value to insert for those derivatives.  Upon
- input to the user function, FJAC is set to a vector with the same
- length as P, with a value of 1 for a parameter which is free, and a
- value of zero for a parameter which is fixed (and hence no
- derivative needs to be calculated).
-
- If the data is higher than one dimensional, then the *last*
- dimension should be the parameter dimension.  Example: fitting a
- 50x50 image, "dp" should be 50x50xNPAR.
+    User functions may also indicate a fatal error condition using the
+    status return described above. If status is set to a number between
+    -15 and -1 then MPFIT will stop the calculation and return to the caller.
 
 
-           CONSTRAINING PARAMETER VALUES WITH THE PARINFO KEYWORD
+                                ANALYTIC DERIVATIVES
 
- The behavior of MPFIT can be modified with respect to each
- parameter to be fitted.  A parameter value can be fixed; simple
- boundary constraints can be imposed; limitations on the parameter
- changes can be imposed; properties of the automatic derivative can
- be modified; and parameters can be tied to one another.
+    In the search for the best-fit solution, MPFIT by default
+    calculates derivatives numerically via a finite difference
+    approximation.  The user-supplied function need not calculate the
+    derivatives explicitly.  However, if you desire to compute them
+    analytically, then the AUTODERIVATIVE=0 keyword must be passed to MPFIT.
+    As a practical matter, it is often sufficient and even faster to allow
+    MPFIT to calculate the derivatives numerically, and so
+    AUTODERIVATIVE=0 is not necessary.
 
- These properties are governed by the PARINFO structure, which is
- passed as a keyword parameter to MPFIT.
+    If AUTODERIVATIVE=0 is used then the user function must check the parameter
+    FJAC, and if FJAC!=None then return the partial derivative array in the
+    return list.
 
- PARINFO should be a list of dictionaries, one list entry for each parameter.
- Each parameter is associated with one element of the array, in
- numerical order.  The dictionary can have the following keys
- (none are required, keys are case insensitive):
+    where FGRAD(x, p, i) is a user function which must compute the
+    derivative of the model with respect to parameter P[i] at X.  When
+    finite differencing is used for computing derivatives (ie, when
+    AUTODERIVATIVE=1), or when MPFIT needs only the errors but not the
+    derivatives the parameter FJAC=None.
+
+    Derivatives should be returned in the PDERIV array. PDERIV should be an m x
+    n array, where m is the number of data points and n is the number
+    of parameters.  dp[i,j] is the derivative at the ith point with
+    respect to the jth parameter.
+
+    The derivatives with respect to fixed parameters are ignored; zero
+    is an appropriate value to insert for those derivatives.  Upon
+    input to the user function, FJAC is set to a vector with the same
+    length as P, with a value of 1 for a parameter which is free, and a
+    value of zero for a parameter which is fixed (and hence no
+    derivative needs to be calculated).
+
+    If the data is higher than one dimensional, then the *last*
+    dimension should be the parameter dimension.  Example: fitting a
+    50x50 image, "dp" should be 50x50xNPAR.
+
+
+    CONSTRAINING PARAMETER VALUES WITH THE PARINFO KEYWORD
+
+    The behavior of MPFIT can be modified with respect to each
+    parameter to be fitted.  A parameter value can be fixed; simple
+    boundary constraints can be imposed; limitations on the parameter
+    changes can be imposed; properties of the automatic derivative can
+    be modified; and parameters can be tied to one another.
+
+    These properties are governed by the PARINFO structure, which is
+    passed as a keyword parameter to MPFIT.
+
+    PARINFO should be a list of dictionaries, one list entry for each parameter.
+    Each parameter is associated with one element of the array, in
+    numerical order.  The dictionary can have the following keys
+    (none are required, keys are case insensitive):
 
     'value' - the starting parameter value (but see the START_PARAMS
-             parameter for more information).
+         parameter for more information).
 
     'fixed' - a boolean value, whether the parameter is to be held
-             fixed or not.  Fixed parameters are not varied by
-             MPFIT, but are passed on to MYFUNCT for evaluation.
+         fixed or not.  Fixed parameters are not varied by
+         MPFIT, but are passed on to MYFUNCT for evaluation.
 
     'limited' - a two-element boolean array.  If the first/second
-               element is set, then the parameter is bounded on the
-               lower/upper side.  A parameter can be bounded on both
-               sides.  Both LIMITED and LIMITS must be given
-               together.
+           element is set, then the parameter is bounded on the
+           lower/upper side.  A parameter can be bounded on both
+           sides.  Both LIMITED and LIMITS must be given
+           together.
 
     'limits' - a two-element float array.  Gives the
-              parameter limits on the lower and upper sides,
-              respectively.  Zero, one or two of these values can be
-              set, depending on the values of LIMITED.  Both LIMITED
-              and LIMITS must be given together.
+          parameter limits on the lower and upper sides,
+          respectively.  Zero, one or two of these values can be
+          set, depending on the values of LIMITED.  Both LIMITED
+          and LIMITS must be given together.
 
     'parname' - a string, giving the name of the parameter.  The
-               fitting code of MPFIT does not use this tag in any
-               way.  However, the default iterfunct will print the
-               parameter name if available.
+           fitting code of MPFIT does not use this tag in any
+           way.  However, the default iterfunct will print the
+           parameter name if available.
 
     'step' - the step size to be used in calculating the numerical
-            derivatives.  If set to zero, then the step size is
-            computed automatically.  Ignored when AUTODERIVATIVE=0.
+        derivatives.  If set to zero, then the step size is
+        computed automatically.  Ignored when AUTODERIVATIVE=0.
 
     'mpside' - the sidedness of the finite difference when computing
-              numerical derivatives.  This field can take four
-              values:
+          numerical derivatives.  This field can take four
+          values:
 
-                 0 - one-sided derivative computed automatically
-                 1 - one-sided derivative (f(x+h) - f(x)  )/h
-                -1 - one-sided derivative (f(x)   - f(x-h))/h
-                 2 - two-sided derivative (f(x+h) - f(x-h))/(2*h)
+             0 - one-sided derivative computed automatically
+             1 - one-sided derivative (f(x+h) - f(x)  )/h
+            -1 - one-sided derivative (f(x)   - f(x-h))/h
+             2 - two-sided derivative (f(x+h) - f(x-h))/(2*h)
 
-             Where H is the STEP parameter described above.  The
-             "automatic" one-sided derivative method will chose a
-             direction for the finite difference which does not
-             violate any constraints.  The other methods do not
-             perform this check.  The two-sided method is in
-             principle more precise, but requires twice as many
-             function evaluations.  Default: 0.
+         Where H is the STEP parameter described above.  The
+         "automatic" one-sided derivative method will chose a
+         direction for the finite difference which does not
+         violate any constraints.  The other methods do not
+         perform this check.  The two-sided method is in
+         principle more precise, but requires twice as many
+         function evaluations.  Default: 0.
 
     'mpmaxstep' - the maximum change to be made in the parameter
-                 value.  During the fitting process, the parameter
-                 will never be changed by more than this value in
-                 one iteration.
+             value.  During the fitting process, the parameter
+             will never be changed by more than this value in
+             one iteration.
 
-                 A value of 0 indicates no maximum.  Default: 0.
+             A value of 0 indicates no maximum.  Default: 0.
 
     'tied' - a string expression which "ties" the parameter to other
-            free or fixed parameters.  Any expression involving
-            constants and the parameter array P are permitted.
-            Example: if parameter 2 is always to be twice parameter
-            1 then use the following: parinfo(2).tied = '2 * p(1)'.
-            Since they are totally constrained, tied parameters are
-            considered to be fixed; no errors are computed for them.
-            [ NOTE: the PARNAME can't be used in expressions. ]
+        free or fixed parameters.  Any expression involving
+        constants and the parameter array P are permitted.
+        Example: if parameter 2 is always to be twice parameter
+        1 then use the following: parinfo(2).tied = '2 * p(1)'.
+        Since they are totally constrained, tied parameters are
+        considered to be fixed; no errors are computed for them.
+        [ NOTE: the PARNAME can't be used in expressions. ]
 
     'mpprint' - if set to 1, then the default iterfunct will print the
-               parameter value.  If set to 0, the parameter value
-               will not be printed.  This tag can be used to
-               selectively print only a few parameter values out of
-               many.  Default: 1 (all parameters printed)
+           parameter value.  If set to 0, the parameter value
+           will not be printed.  This tag can be used to
+           selectively print only a few parameter values out of
+           many.  Default: 1 (all parameters printed)
 
 
- Future modifications to the PARINFO structure, if any, will involve
- adding dictionary tags beginning with the two letters "MP".
- Therefore programmers are urged to avoid using tags starting with
- the same letters; otherwise they are free to include their own
- fields within the PARINFO structure, and they will be ignored.
+    Future modifications to the PARINFO structure, if any, will involve
+    adding dictionary tags beginning with the two letters "MP".
+    Therefore programmers are urged to avoid using tags starting with
+    the same letters; otherwise they are free to include their own
+    fields within the PARINFO structure, and they will be ignored.
 
- PARINFO Example:
- parinfo = [{'value':0., 'fixed':0, 'limited':[0,0], 'limits':[0.,0.]}
-                                                 for i in range(5)]
- parinfo[0]['fixed'] = 1
- parinfo[4]['limited'][0] = 1
- parinfo[4]['limits'][0]  = 50.
- values = [5.7, 2.2, 500., 1.5, 2000.]
- for i in range(5): parinfo[i]['value']=values[i]
+    PARINFO Example:
+    parinfo = [{'value':0., 'fixed':0, 'limited':[0,0], 'limits':[0.,0.]}
+                                                     for i in range(5)]
+    parinfo[0]['fixed'] = 1
+    parinfo[4]['limited'][0] = 1
+    parinfo[4]['limits'][0]  = 50.
+    values = [5.7, 2.2, 500., 1.5, 2000.]
+    for i in range(5): parinfo[i]['value']=values[i]
 
- A total of 5 parameters, with starting values of 5.7,
- 2.2, 500, 1.5, and 2000 are given.  The first parameter
- is fixed at a value of 5.7, and the last parameter is
- constrained to be above 50.
-
-
-                                   EXAMPLE
-
-   import mpfit
-   import np.oldnumeric as Numeric
-   x = arange(100, float)
-   p0 = [5.7, 2.2, 500., 1.5, 2000.]
-   y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*sqrt(x) +
-         p[4]*log(x))
-   fa = {'x':x, 'y':y, 'err':err}
-   m = mpfit('myfunct', p0, functkw=fa)
-   print 'status = ', m.status
-   if (m.status <= 0): print 'error message = ', m.errmsg
-   print 'parameters = ', m.params
-
-   Minimizes sum of squares of MYFUNCT.  MYFUNCT is called with the X,
-   Y, and ERR keyword parameters that are given by FUNCTKW.  The
-   results can be obtained from the returned object m.
+    A total of 5 parameters, with starting values of 5.7,
+    2.2, 500, 1.5, and 2000 are given.  The first parameter
+    is fixed at a value of 5.7, and the last parameter is
+    constrained to be above 50.
 
 
-                            THEORY OF OPERATION
+    EXAMPLE
 
-   There are many specific strategies for function minimization.  One
-   very popular technique is to use function gradient information to
-   realize the local structure of the function.  Near a local minimum
-   the function value can be taylor expanded about x0 as follows:
+    import mpfit
+    import np.oldnumeric as Numeric
+    x = arange(100, float)
+    p0 = [5.7, 2.2, 500., 1.5, 2000.]
+    y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*sqrt(x) + p[4]*log(x))
+    fa = {'x':x, 'y':y, 'err':err}
+    m = mpfit('myfunct', p0, functkw=fa)
+    print 'status = ', m.status
+    if (m.status <= 0): print 'error message = ', m.errmsg
+    print 'parameters = ', m.params
 
-      f(x) = f(x0) + f'(x0) . (x-x0) + (1/2) (x-x0) . f''(x0) . (x-x0)
-             -----   ---------------   -------------------------------  (1)
-     Order	0th		  1st					  2nd
-
-   Here f'(x) is the gradient vector of f at x, and f''(x) is the
-   Hessian matrix of second derivatives of f at x.  The vector x is
-   the set of function parameters, not the measured data vector.  One
-   can find the minimum of f, f(xm) using Newton's method, and
-   arrives at the following linear equation:
-
-      f''(x0) . (xm-x0) = - f'(x0)							(2)
-
-   If an inverse can be found for f''(x0) then one can solve for
-   (xm-x0), the step vector from the current position x0 to the new
-   projected minimum.  Here the problem has been linearized (ie, the
-   gradient information is known to first order).  f''(x0) is
-   symmetric n x n matrix, and should be positive definite.
-
-   The Levenberg - Marquardt technique is a variation on this theme.
-   It adds an additional diagonal term to the equation which may aid the
-   convergence properties:
-
-      (f''(x0) + nu I) . (xm-x0) = -f'(x0)				  (2a)
-
-   where I is the identity matrix.  When nu is large, the overall
-   matrix is diagonally dominant, and the iterations follow steepest
-   descent.  When nu is small, the iterations are quadratically
-   convergent.
-
-   In principle, if f''(x0) and f'(x0) are known then xm-x0 can be
-   determined.  However the Hessian matrix is often difficult or
-   impossible to compute.  The gradient f'(x0) may be easier to
-   compute, if even by finite difference techniques.  So-called
-   quasi-Newton techniques attempt to successively estimate f''(x0)
-   by building up gradient information as the iterations proceed.
-
-   In the least squares problem there are further simplifications
-   which assist in solving eqn (2).  The function to be minimized is
-   a sum of squares:
-
-       f = Sum(hi^2)										 (3)
-
-   where hi is the ith residual out of m residuals as described
-   above.  This can be substituted back into eqn (2) after computing
-   the derivatives:
-
-       f'  = 2 Sum(hi  hi')
-       f'' = 2 Sum(hi' hj') + 2 Sum(hi hi'')				(4)
-
-   If one assumes that the parameters are already close enough to a
-   minimum, then one typically finds that the second term in f'' is
-   negligible [or, in any case, is too difficult to compute].  Thus,
-   equation (2) can be solved, at least approximately, using only
-   gradient information.
-
-   In matrix notation, the combination of eqns (2) and (4) becomes:
-
-        hT' . h' . dx = - hT' . h						  (5)
-
-   Where h is the residual vector (length m), hT is its transpose, h'
-   is the Jacobian matrix (dimensions n x m), and dx is (xm-x0).  The
-   user function supplies the residual vector h, and in some cases h'
-   when it is not found by finite differences (see MPFIT_FDJAC2,
-   which finds h and hT').  Even if dx is not the best absolute step
-   to take, it does provide a good estimate of the best *direction*,
-   so often a line minimization will occur along the dx vector
-   direction.
-
-   The method of solution employed by MINPACK is to form the Q . R
-   factorization of h', where Q is an orthogonal matrix such that QT .
-   Q = I, and R is upper right triangular.  Using h' = Q . R and the
-   ortogonality of Q, eqn (5) becomes
-
-        (RT . QT) . (Q . R) . dx = - (RT . QT) . h
-                     RT . R . dx = - RT . QT . h		 (6)
-                          R . dx = - QT . h
-
-   where the last statement follows because R is upper triangular.
-   Here, R, QT and h are known so this is a matter of solving for dx.
-   The routine MPFIT_QRFAC provides the QR factorization of h, with
-   pivoting, and MPFIT_QRSOLV provides the solution for dx.
+    Minimizes sum of squares of MYFUNCT.  MYFUNCT is called with the X,
+    Y, and ERR keyword parameters that are given by FUNCTKW.  The
+    results can be obtained from the returned object m.
 
 
-                                 REFERENCES
+    THEORY OF OPERATION
 
-   MINPACK-1, Jorge More', available from netlib (www.netlib.org).
-   "Optimization Software Guide," Jorge More' and Stephen Wright,
-     SIAM, *Frontiers in Applied Mathematics*, Number 14.
-   More', Jorge J., "The Levenberg-Marquardt Algorithm:
-     Implementation and Theory," in *Numerical Analysis*, ed. Watson,
-     G. A., Lecture Notes in Mathematics 630, Springer-Verlag, 1977.
+    There are many specific strategies for function minimization.  One
+    very popular technique is to use function gradient information to
+    realize the local structure of the function.  Near a local minimum
+    the function value can be taylor expanded about x0 as follows:
+
+    f(x) = f(x0) + f'(x0) . (x-x0) + (1/2) (x-x0) . f''(x0) . (x-x0)
+    Order   0th          1st                     2nd
+
+    Here f'(x) is the gradient vector of f at x, and f''(x) is the
+    Hessian matrix of second derivatives of f at x.  The vector x is
+    the set of function parameters, not the measured data vector.  One
+    can find the minimum of f, f(xm) using Newton's method, and
+    arrives at the following linear equation:
+
+    f''(x0) . (xm-x0) = - f'(x0)                            (2)
+
+    If an inverse can be found for f''(x0) then one can solve for
+    (xm-x0), the step vector from the current position x0 to the new
+    projected minimum.  Here the problem has been linearized (ie, the
+    gradient information is known to first order).  f''(x0) is
+    symmetric n x n matrix, and should be positive definite.
+
+    The Levenberg - Marquardt technique is a variation on this theme.
+    It adds an additional diagonal term to the equation which may aid the
+    convergence properties:
+
+    (f''(x0) + nu I) . (xm-x0) = -f'(x0)                  (2a)
+
+    where I is the identity matrix.  When nu is large, the overall
+    matrix is diagonally dominant, and the iterations follow steepest
+    descent.  When nu is small, the iterations are quadratically
+    convergent.
+
+    In principle, if f''(x0) and f'(x0) are known then xm-x0 can be
+    determined.  However the Hessian matrix is often difficult or
+    impossible to compute.  The gradient f'(x0) may be easier to
+    compute, if even by finite difference techniques.  So-called
+    quasi-Newton techniques attempt to successively estimate f''(x0)
+    by building up gradient information as the iterations proceed.
+
+    In the least squares problem there are further simplifications
+    which assist in solving eqn (2).  The function to be minimized is
+    a sum of squares:
+
+    f = Sum(hi^2)                                         (3)
+
+    where hi is the ith residual out of m residuals as described
+    above.  This can be substituted back into eqn (2) after computing
+    the derivatives:
+
+    f'  = 2 Sum(hi  hi')
+    f'' = 2 Sum(hi' hj') + 2 Sum(hi hi'')                (4)
+
+    If one assumes that the parameters are already close enough to a
+    minimum, then one typically finds that the second term in f'' is
+    negligible [or, in any case, is too difficult to compute].  Thus,
+    equation (2) can be solved, at least approximately, using only
+    gradient information.
+
+    In matrix notation, the combination of eqns (2) and (4) becomes:
+
+    hT' . h' . dx = - hT' . h                          (5)
+
+    Where h is the residual vector (length m), hT is its transpose, h'
+    is the Jacobian matrix (dimensions n x m), and dx is (xm-x0).  The
+    user function supplies the residual vector h, and in some cases h'
+    when it is not found by finite differences (see MPFIT_FDJAC2,
+    which finds h and hT').  Even if dx is not the best absolute step
+    to take, it does provide a good estimate of the best *direction*,
+    so often a line minimization will occur along the dx vector
+    direction.
+
+    The method of solution employed by MINPACK is to form the Q . R
+    factorization of h', where Q is an orthogonal matrix such that QT .
+    Q = I, and R is upper right triangular.  Using h' = Q . R and the
+    ortogonality of Q, eqn (5) becomes
+
+    (RT . QT) . (Q . R) . dx = - (RT . QT) . h
+    RT . R . dx = - RT . QT . h          (6)
+    R . dx = - QT . h
+
+    where the last statement follows because R is upper triangular.
+    Here, R, QT and h are known so this is a matter of solving for dx.
+    The routine MPFIT_QRFAC provides the QR factorization of h, with
+    pivoting, and MPFIT_QRSOLV provides the solution for dx.
 
 
-                           MODIFICATION HISTORY
+    REFERENCES
 
-   Translated from MINPACK-1 in FORTRAN, Apr-Jul 1998, CM
- Copyright (C) 1997-2002, Craig Markwardt
- This software is provided as is without any warranty whatsoever.
- Permission to use, copy, modify, and distribute modified or
- unmodified copies is granted, provided this copyright and disclaimer
- are included unchanged.
+    MINPACK-1, Jorge More', available from netlib (www.netlib.org).
+    "Optimization Software Guide," Jorge More' and Stephen Wright, SIAM,
+    *Frontiers in Applied Mathematics*, Number 14.
+    More', Jorge J., "The Levenberg-Marquardt Algorithm: Implementation and
+    Theory," in *Numerical Analysis*, ed. Watson, G. A., Lecture Notes
+    in Mathematics 630, Springer-Verlag, 1977.
 
-   Translated from MPFIT (Craig Markwardt's IDL package) to Python,
-   August, 2002.  Mark Rivers
-   Converted from Numeric to numpy (Sergey Koposov, July 2008)
+
+    MODIFICATION HISTORY
+
+    Translated from MINPACK-1 in FORTRAN, Apr-Jul 1998, CM
+    Copyright (C) 1997-2002, Craig Markwardt
+    This software is provided as is without any warranty whatsoever.
+    Permission to use, copy, modify, and distribute modified or
+    unmodified copies is granted, provided this copyright and disclaimer
+    are included unchanged.
+
+    Translated from MPFIT (Craig Markwardt's IDL package) to Python,
+    August, 2002.  Mark Rivers
+    Converted from Numeric to numpy (Sergey Koposov, July 2008)
 """
 
-
-#	 Original FORTRAN documentation
-#	 **********
-#
-#	 subroutine lmdif
-#
-#	 the purpose of lmdif is to minimize the sum of the squares of
-#	 m nonlinear functions in n variables by a modification of
-#	 the levenberg-marquardt algorithm. the user must provide a
-#	 subroutine which calculates the functions. the jacobian is
-#	 then calculated by a forward-difference approximation.
-#
-#	 the subroutine statement is
-#
-#	   subroutine lmdif(fcn,m,n,x,fvec,ftol,xtol,gtol,maxfev,epsfcn,
-#						diag,mode,factor,nprint,info,nfev,fjac,
-#						ldfjac,ipvt,qtf,wa1,wa2,wa3,wa4)
-#
-#	 where
-#
-#	   fcn is the name of the user-supplied subroutine which
-#		 calculates the functions. fcn must be declared
-#		 in an external statement in the user calling
-#		 program, and should be written as follows.
-#
-#		 subroutine fcn(m,n,x,fvec,iflag)
-#		 integer m,n,iflag
-#		 double precision x(n),fvec(m)
-#		 ----------
-#		 calculate the functions at x and
-#		 return this vector in fvec.
-#		 ----------
-#		 return
-#		 end
-#
-#		 the value of iflag should not be changed by fcn unless
-#		 the user wants to terminate execution of lmdif.
-#		 in this case set iflag to a negative integer.
-#
-#	   m is a positive integer input variable set to the number
-#		 of functions.
-#
-#	   n is a positive integer input variable set to the number
-#		 of variables. n must not exceed m.
-#
-#	   x is an array of length n. on input x must contain
-#		 an initial estimate of the solution vector. on output x
-#		 contains the final estimate of the solution vector.
-#
-#	   fvec is an output array of length m which contains
-#		 the functions evaluated at the output x.
-#
-#	   ftol is a nonnegative input variable. termination
-#		 occurs when both the actual and predicted relative
-#		 reductions in the sum of squares are at most ftol.
-#		 therefore, ftol measures the relative error desired
-#		 in the sum of squares.
-#
-#	   xtol is a nonnegative input variable. termination
-#		 occurs when the relative error between two consecutive
-#		 iterates is at most xtol. therefore, xtol measures the
-#		 relative error desired in the approximate solution.
-#
-#	   gtol is a nonnegative input variable. termination
-#		 occurs when the cosine of the angle between fvec and
-#		 any column of the jacobian is at most gtol in absolute
-#		 value. therefore, gtol measures the orthogonality
-#		 desired between the function vector and the columns
-#		 of the jacobian.
-#
-#	   maxfev is a positive integer input variable. termination
-#		 occurs when the number of calls to fcn is at least
-#		 maxfev by the end of an iteration.
-#
-#	   epsfcn is an input variable used in determining a suitable
-#		 step length for the forward-difference approximation. this
-#		 approximation assumes that the relative errors in the
-#		 functions are of the order of epsfcn. if epsfcn is less
-#		 than the machine precision, it is assumed that the relative
-#		 errors in the functions are of the order of the machine
-#		 precision.
-#
-#	   diag is an array of length n. if mode = 1 (see
-#		 below), diag is internally set. if mode = 2, diag
-#		 must contain positive entries that serve as
-#		 multiplicative scale factors for the variables.
-#
-#	   mode is an integer input variable. if mode = 1, the
-#		 variables will be scaled internally. if mode = 2,
-#		 the scaling is specified by the input diag. other
-#		 values of mode are equivalent to mode = 1.
-#
-#	   factor is a positive input variable used in determining the
-#		 initial step bound. this bound is set to the product of
-#		 factor and the euclidean norm of diag*x if nonzero, or else
-#		 to factor itself. in most cases factor should lie in the
-#		 interval (.1,100.). 100. is a generally recommended value.
-#
-#	   nprint is an integer input variable that enables controlled
-#		 printing of iterates if it is positive. in this case,
-#		 fcn is called with iflag = 0 at the beginning of the first
-#		 iteration and every nprint iterations thereafter and
-#		 immediately prior to return, with x and fvec available
-#		 for printing. if nprint is not positive, no special calls
-#		 of fcn with iflag = 0 are made.
-#
-#	   info is an integer output variable. if the user has
-#		 terminated execution, info is set to the (negative)
-#		 value of iflag. see description of fcn. otherwise,
-#		 info is set as follows.
-#
-#		 info = 0  improper input parameters.
-#
-#		 info = 1  both actual and predicted relative reductions
-#				   in the sum of squares are at most ftol.
-#
-#		 info = 2  relative error between two consecutive iterates
-#				   is at most xtol.
-#
-#		 info = 3  conditions for info = 1 and info = 2 both hold.
-#
-#		 info = 4  the cosine of the angle between fvec and any
-#				   column of the jacobian is at most gtol in
-#				   absolute value.
-#
-#		 info = 5  number of calls to fcn has reached or
-#				   exceeded maxfev.
-#
-#		 info = 6  ftol is too small. no further reduction in
-#				   the sum of squares is possible.
-#
-#		 info = 7  xtol is too small. no further improvement in
-#				   the approximate solution x is possible.
-#
-#		 info = 8  gtol is too small. fvec is orthogonal to the
-#				   columns of the jacobian to machine precision.
-#
-#	   nfev is an integer output variable set to the number of
-#		 calls to fcn.
-#
-#	   fjac is an output m by n array. the upper n by n submatrix
-#		 of fjac contains an upper triangular matrix r with
-#		 diagonal elements of nonincreasing magnitude such that
-#
-#				t	 t		   t
-#			   p *(jac *jac)*p = r *r,
-#
-#		 where p is a permutation matrix and jac is the final
-#		 calculated jacobian. column j of p is column ipvt(j)
-#		 (see below) of the identity matrix. the lower trapezoidal
-#		 part of fjac contains information generated during
-#		 the computation of r.
-#
-#	   ldfjac is a positive integer input variable not less than m
-#		 which specifies the leading dimension of the array fjac.
-#
-#	   ipvt is an integer output array of length n. ipvt
-#		 defines a permutation matrix p such that jac*p = q*r,
-#		 where jac is the final calculated jacobian, q is
-#		 orthogonal (not stored), and r is upper triangular
-#		 with diagonal elements of nonincreasing magnitude.
-#		 column j of p is column ipvt(j) of the identity matrix.
-#
-#	   qtf is an output array of length n which contains
-#		 the first n elements of the vector (q transpose)*fvec.
-#
-#	   wa1, wa2, and wa3 are work arrays of length n.
-#
-#	   wa4 is a work array of length m.
-#
-#	 subprograms called
-#
-#	   user-supplied ...... fcn
-#
-#	   minpack-supplied ... dpmpar,enorm,fdjac2,,qrfac
-#
-#	   fortran-supplied ... dabs,dmax1,dmin1,dsqrt,mod
-#
-#	 argonne national laboratory. minpack project. march 1980.
-#	 burton s. garbow, kenneth e. hillstrom, jorge j. more
-#
-#	 **********
-
-class mpfit:
-    blas_enorm32, = scipy.linalg.blas.get_blas_funcs(['nrm2'], np.array([0], dtype=np.float32))
-    blas_enorm64, = scipy.linalg.blas.get_blas_funcs(['nrm2'], np.array([0], dtype=np.float64))
+    blas_enorm32, = scipy.linalg.blas.get_blas_funcs(['nrm2'], np.array([0],
+                                                                        dtype=np.float32))
+    blas_enorm64, = scipy.linalg.blas.get_blas_funcs(['nrm2'], np.array([0],
+                                                                        dtype=np.float64))
 
     def __init__(self, fcn, xall=None, functkw={}, parinfo=None,
                  ftol=1.e-10, xtol=1.e-10, gtol=1.e-10,
@@ -2456,238 +1228,90 @@ class mpfit:
                  rescale=0, autoderivative=1, quiet=0,
                  diag=None, epsfcn=None, debug=0):
         """
-  Inputs:
-    fcn:
-       The function to be minimized.  The function should return the weighted
-       deviations between the model and the data, as described above.
+        Initialize the optimizer with user-defined parameters.
 
-    xall:
-       An array of starting values for each of the parameters of the model.
-       The number of parameters should be fewer than the number of measurements.
+        Args:
+            fcn (callable): The function to be minimized. The function should return
+                the weighted deviations between the model and the data.
+            xall (array, optional): An array of starting values for each of the
+                parameters of the model. The number of parameters should be fewer
+                than the number of measurements. This parameter is optional if the
+                `parinfo` keyword is used.
+            functkw (dict, optional): A dictionary containing parameters to be
+                passed to the user-supplied function specified by `fcn` via the
+                keyword dictionary mechanism. Default is {} (no extra parameters).
+            parinfo (list of dicts, optional): A mechanism for more sophisticated
+                constraints to be placed on parameter values. Default is None (all
+                parameters are free and unconstrained).
+            ftol (float, optional): A nonnegative variable that measures the
+                desired relative error in the sum of squares. Default is 1E-10.
+            xtol (float, optional): A nonnegative variable that measures the
+                desired relative error in the approximate solution. Default is 1E-10.
+            gtol (float, optional): A nonnegative variable that measures the
+                orthogonality desired between the function vector and the columns
+                of the Jacobian. Default is 1E-10.
+            damp (float, optional): A scalar number indicating the cut-off value
+                of residuals where damping will occur. Default is 0 (no damping).
+            maxiter (int, optional): The maximum number of iterations to perform.
+                Default is 2000.
+            factor (float, optional): A factor that influences the step size.
+                Default is 100.
+            nprint (int, optional): The frequency with which `iterfunct` is called.
+                Default is 1.
+            iterfunct (callable, optional): A function to be called upon each
+                `nprint` iteration of the MPFIT routine. Default is 'default'.
+            iterkw (dict, optional): Keyword arguments to be passed to `iterfunct`.
+                Default is {} (no arguments passed).
+            nocovar (int, optional): Set this keyword to prevent the calculation
+                of the covariance matrix before returning. Default is 0 (covariance
+                matrix is returned).
+            rescale (int, optional): Flag for rescaling parameters. Default is 0.
+            autoderivative (int, optional): If set, derivatives of the function
+                will be computed automatically. Default is 1 (set).
+            quiet (int, optional): Set this keyword when no textual output
+                should be printed by MPFIT. Default is 0.
+            diag (array, optional): An array for parameter scaling. Default is None.
+            epsfcn (float, optional): A parameter for finite differencing.
+                Default is None.
+            debug (int, optional): Debugging flag. Default is 0.
 
-       This parameter is optional if the parinfo keyword is used (but see
-       parinfo).  The parinfo keyword provides a mechanism to fix or constrain
-       individual parameters.
+        Returns:
+            None: This function initializes the instance variables for the class,
+            which will hold the optimization results as attributes.
 
-  Keywords:
-
-     autoderivative:
-        If this is set, derivatives of the function will be computed
-        automatically via a finite differencing procedure.  If not set, then
-        fcn must provide the (analytical) derivatives.
-           Default: set (=1)
-           NOTE: to supply your own analytical derivatives,
-                 explicitly pass autoderivative=0
-
-     ftol:
-        A nonnegative input variable. Termination occurs when both the actual
-        and predicted relative reductions in the sum of squares are at most
-        ftol (and status is accordingly set to 1 or 3).  Therefore, ftol
-        measures the relative error desired in the sum of squares.
-           Default: 1E-10
-
-     functkw:
-        A dictionary which contains the parameters to be passed to the
-        user-supplied function specified by fcn via the standard Python
-        keyword dictionary mechanism.  This is the way you can pass additional
-        data to your user-supplied function without using global variables.
-
-        Consider the following example:
-           if functkw = {'xval':[1.,2.,3.], 'yval':[1.,4.,9.],
-                         'errval':[1.,1.,1.] }
-        then the user supplied function should be declared like this:
-           def myfunct(p, fjac=None, xval=None, yval=None, errval=None):
-
-        Default: {}   No extra parameters are passed to the user-supplied
-                      function.
-
-     gtol:
-        A nonnegative input variable. Termination occurs when the cosine of
-        the angle between fvec and any column of the jacobian is at most gtol
-        in absolute value (and status is accordingly set to 4). Therefore,
-        gtol measures the orthogonality desired between the function vector
-        and the columns of the jacobian.
-           Default: 1e-10
-
-     iterkw:
-        The keyword arguments to be passed to iterfunct via the dictionary
-        keyword mechanism.  This should be a dictionary and is similar in
-        operation to FUNCTKW.
-           Default: {}  No arguments are passed.
-
-     iterfunct:
-        The name of a function to be called upon each NPRINT iteration of the
-        MPFIT routine.  It should be declared in the following way:
-           def iterfunct(myfunct, p, iter, fnorm, functkw=None,
-                         parinfo=None, quiet=0, dof=None, [iterkw keywords here])
-           # perform custom iteration update
-
-        iterfunct must accept all three keyword parameters (FUNCTKW, PARINFO
-        and QUIET).
-
-        myfunct:  The user-supplied function to be minimized,
-        p:		The current set of model parameters
-        iter:	 The iteration number
-        functkw:  The arguments to be passed to myfunct.
-        fnorm:	The chi-squared value.
-        quiet:	Set when no textual output should be printed.
-        dof:	  The number of degrees of freedom, normally the number of points
-                  less the number of free parameters.
-        See below for documentation of parinfo.
-
-        In implementation, iterfunct can perform updates to the terminal or
-        graphical user interface, to provide feedback while the fit proceeds.
-        If the fit is to be stopped for any reason, then iterfunct should return a
-        a status value between -15 and -1.  Otherwise it should return None
-        (e.g. no return statement) or 0.
-        In principle, iterfunct should probably not modify the parameter values,
-        because it may interfere with the algorithm's stability.  In practice it
-        is allowed.
-
-        Default: an internal routine is used to print the parameter values.
-
-        Set iterfunct=None if there is no user-defined routine and you don't
-        want the internal default routine be called.
-
-     maxiter:
-        The maximum number of iterations to perform.  If the number is exceeded,
-        then the status value is set to 5 and MPFIT returns.
-        Default: 200 iterations
-
-     nocovar:
-        Set this keyword to prevent the calculation of the covariance matrix
-        before returning (see COVAR)
-        Default: clear (=0)  The covariance matrix is returned
-
-     nprint:
-        The frequency with which iterfunct is called.  A value of 1 indicates
-        that iterfunct is called with every iteration, while 2 indicates every
-        other iteration, etc.  Note that several Levenberg-Marquardt attempts
-        can be made in a single iteration.
-        Default value: 1
-
-     parinfo
-        Provides a mechanism for more sophisticated constraints to be placed on
-        parameter values.  When parinfo is not passed, then it is assumed that
-        all parameters are free and unconstrained.  Values in parinfo are never
-        modified during a call to MPFIT.
-
-        See description above for the structure of PARINFO.
-
-        Default value: None  All parameters are free and unconstrained.
-
-     quiet:
-        Set this keyword when no textual output should be printed by MPFIT
-
-     damp:
-        A scalar number, indicating the cut-off value of residuals where
-        "damping" will occur.  Residuals with magnitudes greater than this
-        number will be replaced by their hyperbolic tangent.  This partially
-        mitigates the so-called large residual problem inherent in
-        least-squares solvers (as for the test problem CURVI,
-        http://www.maxthis.com/curviex.htm).
-        A value of 0 indicates no damping.
-           Default: 0
-
-        Note: DAMP doesn't work with autoderivative=0
-
-     xtol:
-        A nonnegative input variable. Termination occurs when the relative error
-        between two consecutive iterates is at most xtol (and status is
-        accordingly set to 2 or 3).  Therefore, xtol measures the relative error
-        desired in the approximate solution.
-        Default: 1E-10
-
-   Outputs:
-
-     Returns an object of type mpfit.  The results are attributes of this class,
-     e.g. mpfit.status, mpfit.errmsg, mpfit.params, npfit.niter, mpfit.covar.
-
-     .status
-        An integer status code is returned.  All values greater than zero can
-        represent success (however .status == 5 may indicate failure to
-        converge). It can have one of the following values:
-
-        -16
-           A parameter or function value has become infinite or an undefined
-           number.  This is usually a consequence of numerical overflow in the
-           user's model function, which must be avoided.
-
-        -15 to -1
-           These are error codes that either MYFUNCT or iterfunct may return to
-           terminate the fitting process.  Values from -15 to -1 are reserved
-           for the user functions and will not clash with MPFIT.
-
-        0  Improper input parameters.
-
-        1  Both actual and predicted relative reductions in the sum of squares
-           are at most ftol.
-
-        2  Relative error between two consecutive iterates is at most xtol
-
-        3  Conditions for status = 1 and status = 2 both hold.
-
-        4  The cosine of the angle between fvec and any column of the jacobian
-           is at most gtol in absolute value.
-
-        5  The maximum number of iterations has been reached.
-
-        6  ftol is too small. No further reduction in the sum of squares is
-           possible.
-
-        7  xtol is too small. No further improvement in the approximate solution
-           x is possible.
-
-        8  gtol is too small. fvec is orthogonal to the columns of the jacobian
-           to machine precision.
-
-     .fnorm
-        The value of the summed squared residuals for the returned parameter
-        values.
-
-     .covar
-        The covariance matrix for the set of parameters returned by MPFIT.
-        The matrix is NxN where N is the number of  parameters.  The square root
-        of the diagonal elements gives the formal 1-sigma statistical errors on
-        the parameters if errors were treated "properly" in fcn.
-        Parameter errors are also returned in .perror.
-
-        To compute the correlation matrix, pcor, use this example:
-           cov = mpfit.covar
-           pcor = cov * 0.
-           for i in range(n):
-              for j in range(n):
-                 pcor[i,j] = cov[i,j]/sqrt(cov[i,i]*cov[j,j])
-
-        If nocovar is set or MPFIT terminated abnormally, then .covar is set to
-        a scalar with value None.
-
-     .errmsg
-        A string error or warning message is returned.
-
-     .nfev
-        The number of calls to MYFUNCT performed.
-
-     .niter
-        The number of iterations completed.
-
-     .perror
-        The formal 1-sigma errors in each parameter, computed from the
-        covariance matrix.  If a parameter is held fixed, or if it touches a
-        boundary, then the error is reported as zero.
-
-        If the fit is unweighted (i.e. no errors were given, or the weights
-        were uniformly set to unity), then .perror will probably not represent
-        the true parameter uncertainties.
-
-        *If* you can assume that the true reduced chi-squared value is unity --
-        meaning that the fit is implicitly assumed to be of good quality --
-        then the estimated parameter uncertainties can be computed by scaling
-        .perror by the measured chi-squared value.
-
-           dof = len(x) - len(mpfit.params) # deg of freedom
-           # scaled uncertainties
-           pcerror = mpfit.perror * sqrt(mpfit.fnorm / dof)
+            .params: The current set of model parameters.
+            .niter: The number of iterations completed.
+            .covar: The covariance matrix for the set of parameters. It is NxN,
+                    where N is the number of parameters. If `nocovar` is set,
+                    this will be None.
+            .perror: The formal 1-sigma errors in each parameter, computed from
+                     the covariance matrix. If a parameter is held fixed or if it
+                     touches a boundary, the error is reported as zero.
+            .status: An integer status code representing the result of the
+                     optimization. Possible values include:
+                -16: A parameter or function value has become infinite, usually
+                     due to numerical overflow.
+                -15 to -1: Error codes that either the user-supplied
+                     function or `iterfunct` may return to terminate the fitting
+                     process.
+                0: Improper input parameters.
+                1: Both actual and predicted relative reductions in the sum
+                     of squares are at most `ftol`.
+                2: Relative error between two consecutive iterates is at most `xtol`.
+                3: Conditions for status = 1 and status = 2 both hold.
+                4: The cosine of the angle between `fvec` and any column of
+                     the Jacobian is at most `gtol` in absolute value.
+                5: The maximum number of iterations has been reached.
+                6: `ftol` is too small; no further reduction in the sum of squares is
+                     possible.
+                7: `xtol` is too small; no further improvement in the approximate
+                     solution is possible.
+                8: `gtol` is too small; `fvec` is orthogonal to the columns
+                     of the Jacobian to machine precision.
+            .errmsg: A string error or warning message, providing additional context
+                     for the status of the optimization.
+            .nfev: The number of calls to the user-defined function performed.
+            .damp: The damping parameter.
 
         """
         self.niter = 0
@@ -2764,7 +1388,8 @@ class mpfit:
         pfixed = self.parinfo(parinfo, 'fixed', default=0, n=npar)
         pfixed = (pfixed == 1)
         for i in range(npar):
-            pfixed[i] = pfixed[i] or (ptied[i] != '')  # Tied parameters are also effectively fixed
+            pfixed[i] = pfixed[i] or (ptied[
+                                          i] != '')  # Tied parameters are also effectively fixed
 
         # Finite differencing step, absolute and relative, and sidedness of deriv.
         step = self.parinfo(parinfo, 'step', default=0., n=npar)
@@ -2888,15 +1513,18 @@ class mpfit:
                     xnew0 = self.params.copy()
 
                     dof = np.max([len(fvec) - len(x), 0])
-                    status = iterfunct(fcn, self.params, self.niter, self.fnorm ** 2,
-                                       functkw=functkw, parinfo=parinfo, quiet=quiet,
+                    status = iterfunct(fcn, self.params, self.niter,
+                                       self.fnorm ** 2,
+                                       functkw=functkw, parinfo=parinfo,
+                                       quiet=quiet,
                                        dof=dof, **iterkw)
                     if status is not None:
                         self.status = status
 
                     # Check for user termination
                     if self.status < 0:
-                        self.errmsg = 'WARNING: premature termination by ' + str(iterfunct)
+                        self.errmsg = 'WARNING: premature termination by ' + str(
+                            iterfunct)
                         return
 
                     # If parameters were changed (grrr..) then re-tie
@@ -3038,12 +1666,14 @@ class mpfit:
                             wa1[whupeg] = np.clip(wa1[whupeg], np.min(wa1), 0.)
 
                         dwa1 = np.abs(wa1) > machep
-                        whl = (np.nonzero(((dwa1 != 0.) & qllim) & ((x + wa1) < llim)))[0]
+                        whl = (np.nonzero(
+                            ((dwa1 != 0.) & qllim) & ((x + wa1) < llim)))[0]
                         if len(whl) > 0:
                             t = ((llim[whl] - x[whl]) /
                                  wa1[whl])
                             alpha = np.min([alpha, np.min(t)])
-                        whu = (np.nonzero(((dwa1 != 0.) & qulim) & ((x + wa1) > ulim)))[0]
+                        whu = (np.nonzero(
+                            ((dwa1 != 0.) & qulim) & ((x + wa1) > ulim)))[0]
                         if len(whu) > 0:
                             t = ((ulim[whu] - x[whu]) /
                                  wa1[whu])
@@ -3106,7 +1736,8 @@ class mpfit:
                 # derivative
                 for j in range(n):
                     wa3[j] = 0
-                    wa3[0:j + 1] = wa3[0:j + 1] + fjac[0:j + 1, j] * wa1[ipvt[j]]
+                    wa3[0:j + 1] = wa3[0:j + 1] + fjac[0:j + 1, j] * wa1[
+                        ipvt[j]]
 
                 # Remember, alpha is the fraction of the full LM step actually
                 # taken
@@ -3254,6 +1885,28 @@ class mpfit:
     def defiter(self, fcn, x, iter, fnorm=None, functkw=None,
                 quiet=0, iterstop=None, parinfo=None,
                 format=None, pformat='%.10g', dof=1):
+        """
+        Print the current iteration information during optimization.
+
+        Args:
+            fcn (callable): The function to be minimized.
+            x (array): Current parameter estimates.
+            iter (int): The current iteration number.
+            fnorm (float, optional): Current function norm (chi-squared).
+                If not provided, it will be computed.
+            functkw (dict, optional): Additional keyword arguments to be
+                passed to `fcn`.
+            quiet (int, optional): If set to a non-zero value, suppress output.
+                Default is 0 (output shown).
+            iterstop (optional): A hypothetical parameter for iteration stopping condition.
+            parinfo (list of dicts, optional): Information for each parameter such as names.
+            format (optional): Custom format for printing.
+            pformat (str, optional): Format for printing parameters. Default is '%.10g'.
+            dof (int, optional): Degrees of freedom. Default is 1.
+
+        Returns:
+            int: Always returns 0 after printing.
+        """
 
         if self.debug:
             print()
@@ -3267,7 +1920,8 @@ class mpfit:
         # Determine which parameters to print
         nprint = len(x)
         print()
-        "Iter ", ('%6i' % iter), "   CHI-SQUARE = ", ('%.10g' % fnorm), " DOF = ", ('%i' % dof)
+        "Iter ", ('%6i' % iter), "   CHI-SQUARE = ", (
+                '%.10g' % fnorm), " DOF = ", ('%i' % dof)
         for i in range(nprint):
             if (parinfo is not None) and ('parname' in parinfo[i]):
                 p = '   ' + parinfo[i]['parname'] + ' = '
@@ -3300,6 +1954,19 @@ class mpfit:
 
     # Procedure to parse the parameter values in PARINFO, which is a list of dictionaries
     def parinfo(self, parinfo=None, key='a', default=None, n=0):
+        """
+        Extract values from a parameter information structure.
+
+        Args:
+            parinfo (list of dicts, optional): List containing parameter information.
+            key (str, optional): The key to look for within `parinfo`. Default is 'a'.
+            default (optional): Default value to return if the key is not found.
+            n (int, optional): The number of parameters to return. Defaults to 0.
+
+        Returns:
+            list: A list of values extracted from `parinfo`, or default values if not found.
+        """
+
         if self.debug:
             print()
             'Entering parinfo...'
@@ -3329,6 +1996,21 @@ class mpfit:
     # Call user function or procedure, with _EXTRA or not, with
     # derivatives or not.
     def call(self, fcn, x, functkw, fjac=None):
+        """
+        Call the user-defined function with the provided parameters.
+
+        Args:
+            fcn (callable): The user's function to be called.
+            x (array): The current parameter estimates to be passed to `fcn`.
+            functkw (dict): Additional keyword arguments to be passed to `fcn`.
+            fjac (optional): Jacobian matrix or related parameter information.
+
+        Returns:
+            list: A list containing:
+                - status (int): Status of the function call.
+                - f (array): Function values calculated at `x`.
+        """
+
         if self.debug:
             print()
             'Entering call...'
@@ -3347,15 +2029,42 @@ class mpfit:
             return fcn(x, fjac=fjac, **functkw)
 
     def enorm(self, vec):
+        """
+        Compute the Euclidean norm of a vector.
+
+        Args:
+            vec (array): The input vector.
+
+        Returns:
+            float: The Euclidean norm of the input vector.
+        """
         ans = self.blas_enorm(vec)
         return ans
 
-    ##============================================================================================
-    ##============================================================================================
-    def fdjac2(self, fcn, x, fvec, step=None, ulimited=None, ulimit=None, dside=None,
-               epsfcn=None, autoderivative=1,
+    def fdjac2(self, fcn, x, fvec, step=None, ulimited=None, ulimit=None,
+               dside=None, epsfcn=None, autoderivative=1,
                functkw=None, xall=None, ifree=None, dstep=None):
-        #
+        """
+        Compute the Jacobian matrix using finite differences.
+
+        Args:
+            fcn (callable): The function to compute the Jacobian for.
+            x (array): The current parameter estimates.
+            fvec (array): Function values at `x`.
+            step (array, optional): Steps for finite differencing. Default is None.
+            ulimited (array, optional): Flags indicating whether parameters are unlimited.
+            ulimit (array, optional): Upper limits for parameters.
+            dside (array, optional): Side of finite difference to use.
+            epsfcn (float, optional): Parameter for finite differencing.
+            autoderivative (int, optional): Set to 0 to use analytical derivatives instead.
+            functkw (dict, optional): Additional keyword arguments for `fcn`.
+            xall (array, optional): Array of all parameters.
+            ifree (array, optional): Indices of free parameters.
+            dstep (array, optional): Absolute or relative step size.
+
+        Returns:
+            array: Jacobian matrix evaluated at `x`.
+        """
         if self.debug:
             print()
             'Entering fdjac2...'
@@ -3456,142 +2165,22 @@ class mpfit:
                 fjac[0:, j] = (fp - fm) / (2 * h[j])
         return fjac
 
-    ##============================================================================================
-    ##============================================================================================
-
-    #	 Original FORTRAN documentation
-    #	 **********
-    #
-    #	 subroutine qrfac
-    #
-    #	 this subroutine uses householder transformations with column
-    #	 pivoting (optional) to compute a qr factorization of the
-    #	 m by n matrix a. that is, qrfac determines an orthogonal
-    #	 matrix q, a permutation matrix p, and an upper trapezoidal
-    #	 matrix r with diagonal elements of nonincreasing magnitude,
-    #	 such that a*p = q*r. the householder transformation for
-    #	 column k, k = 1,2,...,min(m,n), is of the form
-    #
-    #						t
-    #		i - (1/u(k))*u*u
-    #
-    #	 where u has zeros in the first k-1 positions. the form of
-    #	 this transformation and the method of pivoting first
-    #	 appeared in the corresponding linpack subroutine.
-    #
-    #	 the subroutine statement is
-    #
-    #	subroutine qrfac(m,n,a,lda,pivot,ipvt,lipvt,rdiag,acnorm,wa)
-    #
-    #	 where
-    #
-    #	m is a positive integer input variable set to the number
-    #	  of rows of a.
-    #
-    #	n is a positive integer input variable set to the number
-    #	  of columns of a.
-    #
-    #	a is an m by n array. on input a contains the matrix for
-    #	  which the qr factorization is to be computed. on output
-    #	  the strict upper trapezoidal part of a contains the strict
-    #	  upper trapezoidal part of r, and the lower trapezoidal
-    #	  part of a contains a factored form of q (the non-trivial
-    #	  elements of the u vectors described above).
-    #
-    #	lda is a positive integer input variable not less than m
-    #	  which specifies the leading dimension of the array a.
-    #
-    #	pivot is a logical input variable. if pivot is set true,
-    #	  then column pivoting is enforced. if pivot is set false,
-    #	  then no column pivoting is done.
-    #
-    #	ipvt is an integer output array of length lipvt. ipvt
-    #	  defines the permutation matrix p such that a*p = q*r.
-    #	  column j of p is column ipvt(j) of the identity matrix.
-    #	  if pivot is false, ipvt is not referenced.
-    #
-    #	lipvt is a positive integer input variable. if pivot is false,
-    #	  then lipvt may be as small as 1. if pivot is true, then
-    #	  lipvt must be at least n.
-    #
-    #	rdiag is an output array of length n which contains the
-    #	  diagonal elements of r.
-    #
-    #	acnorm is an output array of length n which contains the
-    #	  norms of the corresponding columns of the input matrix a.
-    #	  if this information is not needed, then acnorm can coincide
-    #	  with rdiag.
-    #
-    #	wa is a work array of length n. if pivot is false, then wa
-    #	  can coincide with rdiag.
-    #
-    #	 subprograms called
-    #
-    #	minpack-supplied ... dpmpar,enorm
-    #
-    #	fortran-supplied ... dmax1,dsqrt,min0
-    #
-    #	 argonne national laboratory. minpack project. march 1980.
-    #	 burton s. garbow, kenneth e. hillstrom, jorge j. more
-    #
-    #	 **********
-    #
-    # PIVOTING / PERMUTING:
-    #
-    # Upon return, A(*,*) is in standard parameter order, A(*,IPVT) is in
-    # permuted order.
-    #
-    # RDIAG is in permuted order.
-    # ACNORM is in standard parameter order.
-    #
-    #
-    # NOTE: in IDL the factors appear slightly differently than described
-    # above.  The matrix A is still m x n where m >= n.
-    #
-    # The "upper" triangular matrix R is actually stored in the strict
-    # lower left triangle of A under the standard notation of IDL.
-    #
-    # The reflectors that generate Q are in the upper trapezoid of A upon
-    # output.
-    #
-    #  EXAMPLE:  decompose the matrix [[9.,2.,6.],[4.,8.,7.]]
-    #	aa = [[9.,2.,6.],[4.,8.,7.]]
-    #	mpfit_qrfac, aa, aapvt, rdiag, aanorm
-    #	 IDL> print, aa
-    #		  1.81818*	 0.181818*	 0.545455*
-    #		 -8.54545+	  1.90160*	 0.432573*
-    #	 IDL> print, rdiag
-    #		 -11.0000+	 -7.48166+
-    #
-    # The components marked with a * are the components of the
-    # reflectors, and those marked with a + are components of R.
-    #
-    # To reconstruct Q and R we proceed as follows.  First R.
-    #	r = fltarr(m, n)
-    #	for i = 0, n-1 do r(0:i,i) = aa(0:i,i)  # fill in lower diag
-    #	r(lindgen(n)*(m+1)) = rdiag
-    #
-    # Next, Q, which are composed from the reflectors.  Each reflector v
-    # is taken from the upper trapezoid of aa, and converted to a matrix
-    # via (I - 2 vT . v / (v . vT)).
-    #
-    #   hh = ident									# identity matrix
-    #   for i = 0, n-1 do begin
-    #	v = aa(*,i) & if i GT 0 then v(0:i-1) = 0	# extract reflector
-    #	hh = hh # (ident - 2*(v # v)/total(v * v))  # generate matrix
-    #   endfor
-    #
-    # Test the result:
-    #	IDL> print, hh # transpose(r)
-    #		  9.00000	  4.00000
-    #		  2.00000	  8.00000
-    #		  6.00000	  7.00000
-    #
-    # Note that it is usually never necessary to form the Q matrix
-    # explicitly, and MPFIT does not.
-
     def qrfac(self, a, pivot=0):
-        #
+        """
+        Perform QR factorization of a matrix.
+
+        Args:
+            a (array): Input matrix to be factorized.
+            pivot (int, optional): Whether to perform pivoting (0 for no, 1 for yes).
+
+        Returns:
+            list: A list containing:
+                - a (array): The upper triangular matrix after factorization.
+                - ipvt (array): The pivot indices.
+                - rdiag (array): The diagonal elements of the R matrix.
+                - acnorm (array): The norms of the columns of A.
+        """
+
         if self.debug: print()
         'Entering qrfac...'
         machep = self.machar.machep
@@ -3664,7 +2253,8 @@ class mpfit:
                         a[j:, lk] = ajk - ajj * sum(ajk * ajj) / a[j, lj]
                         if (pivot != 0) and (rdiag[k] != 0):
                             temp = a[j, lk] / rdiag[k]
-                            rdiag[k] = rdiag[k] * np.sqrt(np.max([(1. - temp ** 2), 0.]))
+                            rdiag[k] = rdiag[k] * np.sqrt(
+                                np.max([(1. - temp ** 2), 0.]))
                             temp = rdiag[k] / wa[k]
                             if (0.05 * temp * temp) <= machep:
                                 rdiag[k] = self.enorm(a[j + 1:, lk])
@@ -3672,85 +2262,24 @@ class mpfit:
             rdiag[j] = -ajnorm
         return [a, ipvt, rdiag, acnorm]
 
-    #	 Original FORTRAN documentation
-    #	 **********
-    #
-    #	 subroutine qrsolv
-    #
-    #	 given an m by n matrix a, an n by n diagonal matrix d,
-    #	 and an m-vector b, the problem is to determine an x which
-    #	 solves the system
-    #
-    #		   a*x = b ,	 d*x = 0 ,
-    #
-    #	 in the least squares sense.
-    #
-    #	 this subroutine completes the solution of the problem
-    #	 if it is provided with the necessary information from the
-    #	 factorization, with column pivoting, of a. that is, if
-    #	 a*p = q*r, where p is a permutation matrix, q has orthogonal
-    #	 columns, and r is an upper triangular matrix with diagonal
-    #	 elements of nonincreasing magnitude, then qrsolv expects
-    #	 the full upper triangle of r, the permutation matrix p,
-    #	 and the first n components of (q transpose)*b. the system
-    #	 a*x = b, d*x = 0, is then equivalent to
-    #
-    #				  t	   t
-    #		   r*z = q *b ,  p *d*p*z = 0 ,
-    #
-    #	 where x = p*z. if this system does not have full rank,
-    #	 then a least squares solution is obtained. on output qrsolv
-    #	 also provides an upper triangular matrix s such that
-    #
-    #			t   t			   t
-    #		   p *(a *a + d*d)*p = s *s .
-    #
-    #	 s is computed within qrsolv and may be of separate interest.
-    #
-    #	 the subroutine statement is
-    #
-    #	   subroutine qrsolv(n,r,ldr,ipvt,diag,qtb,x,sdiag,wa)
-    #
-    #	 where
-    #
-    #	   n is a positive integer input variable set to the order of r.
-    #
-    #	   r is an n by n array. on input the full upper triangle
-    #		 must contain the full upper triangle of the matrix r.
-    #		 on output the full upper triangle is unaltered, and the
-    #		 strict lower triangle contains the strict upper triangle
-    #		 (transposed) of the upper triangular matrix s.
-    #
-    #	   ldr is a positive integer input variable not less than n
-    #		 which specifies the leading dimension of the array r.
-    #
-    #	   ipvt is an integer input array of length n which defines the
-    #		 permutation matrix p such that a*p = q*r. column j of p
-    #		 is column ipvt(j) of the identity matrix.
-    #
-    #	   diag is an input array of length n which must contain the
-    #		 diagonal elements of the matrix d.
-    #
-    #	   qtb is an input array of length n which must contain the first
-    #		 n elements of the vector (q transpose)*b.
-    #
-    #	   x is an output array of length n which contains the least
-    #		 squares solution of the system a*x = b, d*x = 0.
-    #
-    #	   sdiag is an output array of length n which contains the
-    #		 diagonal elements of the upper triangular matrix s.
-    #
-    #	   wa is a work array of length n.
-    #
-    #	 subprograms called
-    #
-    #	   fortran-supplied ... dabs,dsqrt
-    #
-    #	 argonne national laboratory. minpack project. march 1980.
-    #	 burton s. garbow, kenneth e. hillstrom, jorge j. more
-    #
-
     def qrsolv(self, r, ipvt, diag, qtb, sdiag):
+        """
+        Solve a linear system using QR factorization.
+
+        Args:
+            r (array): Upper triangular matrix from QR factorization.
+            ipvt (array): Pivot indices.
+            diag (array): Diagonal scaling factors.
+            qtb (array): The product of (Q^T) and the right-hand side vector b.
+            sdiag (array): Storage for diagonal elements.
+
+        Returns:
+            tuple: A tuple containing:
+                - r (array): Modified upper triangular matrix.
+                - x (array): Solution vector.
+                - sdiag (array): Updated diagonal elements.
+        """
+
         if self.debug:
             print()
             'Entering qrsolv...'
@@ -3801,7 +2330,8 @@ class mpfit:
                 # Accumulate the transformation in the row of s
                 if n > k + 1:
                     temp = cosine * r[k + 1:n, k] + sine * sdiag[k + 1:n]
-                    sdiag[k + 1:n] = -sine * r[k + 1:n, k] + cosine * sdiag[k + 1:n]
+                    sdiag[k + 1:n] = -sine * r[k + 1:n, k] + cosine * sdiag[
+                                                                      k + 1:n]
                     r[k + 1:n, k] = temp
             sdiag[j] = r[j, j]
             r[j, j] = x[j]
@@ -3825,101 +2355,27 @@ class mpfit:
         x[ipvt] = wa
         return (r, x, sdiag)
 
-    #	 Original FORTRAN documentation
-    #
-    #	 subroutine lmpar
-    #
-    #	 given an m by n matrix a, an n by n nonsingular diagonal
-    #	 matrix d, an m-vector b, and a positive number delta,
-    #	 the problem is to determine a value for the parameter
-    #	 par such that if x solves the system
-    #
-    #		a*x = b ,	 sqrt(par)*d*x = 0 ,
-    #
-    #	 in the least squares sense, and dxnorm is the euclidean
-    #	 norm of d*x, then either par is zero and
-    #
-    #		(dxnorm-delta) .le. 0.1*delta ,
-    #
-    #	 or par is positive and
-    #
-    #		abs(dxnorm-delta) .le. 0.1*delta .
-    #
-    #	 this subroutine completes the solution of the problem
-    #	 if it is provided with the necessary information from the
-    #	 qr factorization, with column pivoting, of a. that is, if
-    #	 a*p = q*r, where p is a permutation matrix, q has orthogonal
-    #	 columns, and r is an upper triangular matrix with diagonal
-    #	 elements of nonincreasing magnitude, then lmpar expects
-    #	 the full upper triangle of r, the permutation matrix p,
-    #	 and the first n components of (q transpose)*b. on output
-    #	 lmpar also provides an upper triangular matrix s such that
-    #
-    #		 t   t				   t
-    #		p *(a *a + par*d*d)*p = s *s .
-    #
-    #	 s is employed within lmpar and may be of separate interest.
-    #
-    #	 only a few iterations are generally needed for convergence
-    #	 of the algorithm. if, however, the limit of 10 iterations
-    #	 is reached, then the output par will contain the best
-    #	 value obtained so far.
-    #
-    #	 the subroutine statement is
-    #
-    #	subroutine lmpar(n,r,ldr,ipvt,diag,qtb,delta,par,x,sdiag,
-    #					 wa1,wa2)
-    #
-    #	 where
-    #
-    #	n is a positive integer input variable set to the order of r.
-    #
-    #	r is an n by n array. on input the full upper triangle
-    #	  must contain the full upper triangle of the matrix r.
-    #	  on output the full upper triangle is unaltered, and the
-    #	  strict lower triangle contains the strict upper triangle
-    #	  (transposed) of the upper triangular matrix s.
-    #
-    #	ldr is a positive integer input variable not less than n
-    #	  which specifies the leading dimension of the array r.
-    #
-    #	ipvt is an integer input array of length n which defines the
-    #	  permutation matrix p such that a*p = q*r. column j of p
-    #	  is column ipvt(j) of the identity matrix.
-    #
-    #	diag is an input array of length n which must contain the
-    #	  diagonal elements of the matrix d.
-    #
-    #	qtb is an input array of length n which must contain the first
-    #	  n elements of the vector (q transpose)*b.
-    #
-    #	delta is a positive input variable which specifies an upper
-    #	  bound on the euclidean norm of d*x.
-    #
-    #	par is a nonnegative variable. on input par contains an
-    #	  initial estimate of the levenberg-marquardt parameter.
-    #	  on output par contains the final estimate.
-    #
-    #	x is an output array of length n which contains the least
-    #	  squares solution of the system a*x = b, sqrt(par)*d*x = 0,
-    #	  for the output par.
-    #
-    #	sdiag is an output array of length n which contains the
-    #	  diagonal elements of the upper triangular matrix s.
-    #
-    #	wa1 and wa2 are work arrays of length n.
-    #
-    #	 subprograms called
-    #
-    #	minpack-supplied ... dpmpar,enorm,qrsolv
-    #
-    #	fortran-supplied ... dabs,dmax1,dmin1,dsqrt
-    #
-    #	 argonne national laboratory. minpack project. march 1980.
-    #	 burton s. garbow, kenneth e. hillstrom, jorge j. more
-    #
-
     def lmpar(self, r, ipvt, diag, qtb, delta, x, sdiag, par=None):
+        """
+        Perform damped least squares minimization.
+
+        Args:
+            r (array): Upper triangular matrix from QR factorization.
+            ipvt (array): Pivot indices.
+            diag (array): Diagonal scaling factors.
+            qtb (array): The product of (Q^T) and the right-hand side vector b.
+            delta (float): Convergence threshold.
+            x (array): Initial guess for the solution.
+            sdiag (array): Storage for diagonal elements from the QR factorization.
+            par (float, optional): Initial value for the parameter.
+
+        Returns:
+            list: A list containing:
+                - r (array): Modified upper triangular matrix.
+                - par (float): Updated parameter value.
+                - x (array): Solution vector.
+                - sdiag (array): Updated diagonal elements.
+        """
 
         if self.debug:
             print()
@@ -4037,6 +2493,17 @@ class mpfit:
 
     # Procedure to tie one parameter to another.
     def tie(self, p, ptied=None):
+        """
+        Apply constraints by tying parameters to each other.
+
+        Args:
+            p (array): Current parameters.
+            ptied (list of str, optional): List of parameter names to tie.
+
+        Returns:
+            array: The modified parameters.
+        """
+
         if self.debug:
             print()
             'Entering tie...'
@@ -4049,74 +2516,18 @@ class mpfit:
             exec(cmd)
         return p
 
-    #	 Original FORTRAN documentation
-    #	 **********
-    #
-    #	 subroutine covar
-    #
-    #	 given an m by n matrix a, the problem is to determine
-    #	 the covariance matrix corresponding to a, defined as
-    #
-    #					t
-    #		   inverse(a *a) .
-    #
-    #	 this subroutine completes the solution of the problem
-    #	 if it is provided with the necessary information from the
-    #	 qr factorization, with column pivoting, of a. that is, if
-    #	 a*p = q*r, where p is a permutation matrix, q has orthogonal
-    #	 columns, and r is an upper triangular matrix with diagonal
-    #	 elements of nonincreasing magnitude, then covar expects
-    #	 the full upper triangle of r and the permutation matrix p.
-    #	 the covariance matrix is then computed as
-    #
-    #					  t	 t
-    #		   p*inverse(r *r)*p  .
-    #
-    #	 if a is nearly rank deficient, it may be desirable to compute
-    #	 the covariance matrix corresponding to the linearly independent
-    #	 columns of a. to define the numerical rank of a, covar uses
-    #	 the tolerance tol. if l is the largest integer such that
-    #
-    #		   abs(r(l,l)) .gt. tol*abs(r(1,1)) ,
-    #
-    #	 then covar computes the covariance matrix corresponding to
-    #	 the first l columns of r. for k greater than l, column
-    #	 and row ipvt(k) of the covariance matrix are set to zero.
-    #
-    #	 the subroutine statement is
-    #
-    #	   subroutine covar(n,r,ldr,ipvt,tol,wa)
-    #
-    #	 where
-    #
-    #	   n is a positive integer input variable set to the order of r.
-    #
-    #	   r is an n by n array. on input the full upper triangle must
-    #		 contain the full upper triangle of the matrix r. on output
-    #		 r contains the square symmetric covariance matrix.
-    #
-    #	   ldr is a positive integer input variable not less than n
-    #		 which specifies the leading dimension of the array r.
-    #
-    #	   ipvt is an integer input array of length n which defines the
-    #		 permutation matrix p such that a*p = q*r. column j of p
-    #		 is column ipvt(j) of the identity matrix.
-    #
-    #	   tol is a nonnegative input variable used to define the
-    #		 numerical rank of a in the manner described above.
-    #
-    #	   wa is a work array of length n.
-    #
-    #	 subprograms called
-    #
-    #	   fortran-supplied ... dabs
-    #
-    #	 argonne national laboratory. minpack project. august 1980.
-    #	 burton s. garbow, kenneth e. hillstrom, jorge j. more
-    #
-    #	 **********
-
     def calc_covar(self, rr, ipvt=None, tol=1.e-14):
+        """
+        Calculate the covariance matrix based on the QR factorization.
+
+        Args:
+            rr (array): The upper triangular matrix from QR factorization.
+            ipvt (array, optional): Pivot indices.
+            tol (float, optional): Tolerance for determining if a parameter is significant.
+
+        Returns:
+            array: The covariance matrix or -1 in case of an error.
+        """
 
         if self.debug:
             print()
@@ -4185,6 +2596,42 @@ class mpfit:
 
 
 class machar:
+    """
+    A class to hold machine learning variables related to floating point numbers.
+
+    This class gathers important constants and properties of floating point
+    representation, specifically for 32-bit and 64-bit float types,
+    using NumPy's `finfo` to provide values that characterize the limits
+    of floating point precision.
+
+    Attributes:
+        machep (float): The machine epsilon, the smallest value such that
+            `1.0 + machep != 1.0` for the specified floating point type.
+        maxnum (float): The maximum representable positive floating point
+            number for the specified type.
+        minnum (float): The minimum representable positive floating point
+            number (i.e., the smallest positive number greater than zero).
+        maxlog (float): The natural logarithm of the maximum representable
+            positive floating point number.
+        minlog (float): The natural logarithm of the minimum representable
+            positive floating point number.
+        rdwarf (float): A parameter used in scaling small numbers, defined as
+            `sqrt(minnum * 1.5) * 10`.
+        rgiant (float): A parameter used in scaling large numbers, defined as
+            `sqrt(maxnum) * 0.1`.
+
+    Args:
+        double (int, optional): An indicator for the floating point type to
+            use. If set to 0, 32-bit floats (`float32`) are utilized;
+            if set to 1 (or any other value), 64-bit floats (`float64`) are used.
+            Default is 1 (using 64-bit floats).
+
+    Example:
+        >>> m = machar(double=1)
+        >>> print(m.machep)
+        2.220446049250313e-16
+    """
+
     def __init__(self, double=1):
         if double == 0:
             info = np.finfo(np.float32)

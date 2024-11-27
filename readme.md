@@ -1,24 +1,43 @@
-# Twinkle
-Calculate and plot spectral energy distribution of main-sequence stars with additional option of blackbody/greybody calculation from mid-IR excess
-The code is still under development for general use.
+# TWINKLE!
 
-1) Take a look at the Twinkle.ipynb Jupyter notebook to see how to get started.
-2) Use sed_paramfile.json to change input parameters
-3) Use sample_stardata.txt and ./Docs/sedDatFileDescription.xlsx to set up stellar data and look up definitions and examples of each column used.
-4) twinkle.py is the main class called and "inherits" sed.py.
+## ReadtheDocs
 
-5) sed.py hosts all logistical tools to help calculate the SED: Filter profile management, magnitude/flux conversion,  photosphere generation, etc.
+Check out the [Twinkle ReadTheDocs Instructure](https://twinkle.readthedocs.io/en/latest/)
 
-   More documentation is underway
+## Introduction
 
+**Twinkle** is a Python-based tool that calculates the spectral energy distribution ([SED](https://coolwiki.ipac.caltech.edu/index.php/SED_plots_introduction)) of a stellar source using empirical photometric data and stellar model grids.
 
-plot_sed.py is a bit more complicated and is being worked on, but basically runs through a list of stars and calculates their photospheric SED as well as a blackbody fit/calculation to any excess associated with specified bands in the sed_paramfile.json file.
+*Twinkle* was originally created to help calculate the excess infrared (IR) flux from a star. The presence of an IR excess indicates dust orbiting the star. This dust likely results from the grinding and collisions of asteroids, influenced by a larger planetary object—pointing to the potential for finding planets. You can check out the published papers from my thesis using this code in [Patel, Metchev, and Heinze, 2014](https://iopscience.iop.org/article/10.1088/0067-0049/212/1/10) and [Patel et al., 2017](https://iopscience.iop.org/article/10.3847/1538-3881/153/2/54).
 
+Interested in learning more about debris disks? Check out my [blog post](http://cosmicdiary.org/geminiplanetimager/2015/03/04/debris-disks-searching-for-dust-to-find-planets/).
 
+This code base helps you quickly calculate the temperature and location of the dust to first order by fitting the assumed blackbody or modified blackbody function to the broadband excess emission.
 
-Please message me for any comments on improvement or features anyone would like to see.
+Feel free to fork and contribute!
 
-NextGen and Kurucz photosphere models are currently the only ones incorporated into code. 
+---
+
+## Available Features
+
+- Model multiple stellar SEDs at once with an easy-to-use stellar input file.
+- Late B to K-spectral type modeling support. Additional spectral type modeling is possible but not tested (*yet*).
+- Plotting capabilities (link to plotting page upcoming) of the empirical data and the modeled distribution.
+- This [Jupyter Notebook](https://github.com/astropatel/twinkle/blob/master/Twinkle_Tutorial.ipynb) provides a quick-start guide to using **Twinkle**.
+
+> **Note:**  
+> The code hasn't been tested in a while, so there may be issues still being worked on. If you want to contribute, fork and submit a pull request.
+
+---
+
+## Installation and GitHub
+
+Check out **Twinkle** on [GitHub](https://github.com/astropatel/twinkle).
+
+To install:
+
+```bash
+pip install git+https://github.com/astropatel/twinkle.git
 
 References:
 

@@ -29,21 +29,20 @@ units_factor = {'angstrom': 1e-8, 'microns': 1e-4,
 class PhysModels:
 
     def wienTEMP(self, lambda_, units='micron'):
-        """
+        r"""
          To calculate maximum temperature of a blackbody at a given
          wavelength using Wien's law.
 
-        Parameters:
-        -----------
-        lambda_: (float or numpy array) reference wavelength(s) to calculate
-         blackbody temperature
-        units: (string) describes reference wavelength unit. All values in lambda_
-          have to be the same. Allowed units are 'angstrom','microns','cm', 'meters'.
-          Units will be converted to cm for ease of calculation.
+        Args:
+            \lambda_: (float or numpy array) reference wavelength(s) to
+                calculate blackbody temperature
+            units: (string) describes reference wavelength unit. All values in
+                \lambda_ have to be the same. Allowed units are 'angstrom',
+                'microns','cm', 'meters'. Units will be converted to cm
+                for ease of calculation.
 
         Returns:
-        --------
-        Temp: (float or np.array) Temperature in Kelvin.
+            Temp: (float or np.array) Temperature in Kelvin.
         """
         # CHECK UNITS
         x = lambda_
@@ -57,25 +56,49 @@ class PhysModels:
 
     def blackbody(self, lambda_, p0, su2ea1=1, bands=None,
                   units='angstrom', bulk=False, **kwargs):
-        """
-        To calculate the blackbody irradiance in units of cgs
-        Flux (erg s-1 cm-2 A-1). This module assumes projected
-        emission from a source, so solid angle = pi. All physical
-        constants are in units to facilitate this. Wavelength must
-        be in units of angstrom, microns, cm, or meters. They will
-        be converted to cm to carry out the calculation.
-        units: string indicating units of input wavelength
-        will be converted to cm.
+        r"""
+        Calculates the blackbody irradiance in cgs units (erg s⁻¹ cm⁻² Å⁻¹).
 
-                   args: 'angstrom','micron','meters','cm'
-            p0: Array, or list of system parameters: [Td, Rd]
-                Td: dust temperature in Kelvin
-                Rd: dust radius in AU
-            su2ea1: Partial flux normalization. Incorporates distance
-                    to the star, and assumes 1 AU radius: (Rd[AU]/dist[pc])
-                    in natural units. ((AU2cm)/(distance*pc2cm))**2
+        This function computes the blackbody radiation spectrum for a dust source
+        with specified temperature and radius, assuming projected emission with
+        a solid angle of π. The input wavelength is converted to centimeters
+        for calculations, and the physical constants are used accordingly.
 
-            returns flux of dust
+        Args:
+            lambda_ (array-like):
+                Wavelength array at which the blackbody flux is calculated.
+                Units can be specified using the `units` parameter.
+            p0 (list or array-like):
+                System parameters [Td, Rd]:
+                - Td (float): Dust temperature in Kelvin.
+                - Rd (float): Dust radius in astronomical units (AU).
+            su2ea1 (float, optional):
+                Partial flux normalization factor. It accounts for the distance
+                to the star and assumes a 1 AU radius:
+                [(Rd[AU] / dist[pc]) in natural units: ((AU to cm) / (distance in pc x pc to cm))²]
+                Default is 1.
+            bands (array-like, optional):
+                Spectral bands over which to integrate the blackbody spectrum.
+                Default is None.
+            units (str, optional):
+                Units of the input wavelength. Supported values are:
+                - 'angstrom' (default)
+                - 'micron'
+                - 'meters'
+                - 'cm'
+            bulk (bool, optional):
+                If True, performs bulk processing for efficiency. Default is False.
+            kwargs (dict):
+                Additional keyword arguments passed to internal calculations.
+
+        Returns:
+            numpy.ndarray:
+                The blackbody flux at each wavelength in units of erg s⁻¹ cm⁻² Å⁻¹.
+
+        Notes:
+            - The function assumes a projected emission with a solid angle of π.
+            - The input wavelength is internally converted to centimeters to carry out calculations.
+            - This module is designed for dust emission calculations, particularly useful in astrophysical contexts.
         """
 
         # CHECK UNITS

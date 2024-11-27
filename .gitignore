@@ -11,7 +11,6 @@ Backronyms.txt
 tree_structure*.txt
 
 # RSR FILES TO EXCLUDE
-*.xls
 
 .DS_Store
 **/.DS_Store
