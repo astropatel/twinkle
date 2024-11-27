@@ -1,5 +1,5 @@
-mosaic\_tools module
-====================
+mosaic\_tools.ply Documentation
+================================
 
 .. automodule:: twinkle.utils.mosaic_tools
    :members:

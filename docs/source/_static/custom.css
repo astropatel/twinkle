@@ -15,7 +15,3 @@ table.xlsxtable td {
     word-wrap: break-word;
 }
 
-
-.toctree-wrapper .caption, .toctree-wrapper ul {
-    display: none !important;
-}

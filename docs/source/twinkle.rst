@@ -1,5 +1,5 @@
-twinkle module
-==============
+twinkle Documentation
+==========================
 
 .. automodule:: twinkle
    :members:

@@ -1,5 +1,5 @@
-sed\_physics module
-===================
+sed\_physics Documentation
+==========================
 
 .. automodule:: twinkle.utils.sed_physics
    :members:

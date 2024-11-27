@@ -1,6 +1,5 @@
-########################
 User Input File
-########################
+*******************
 
 .. note:: A future iteration of the user input file will change to an excel file to make it easier. It is currently a text file.
 
@@ -54,6 +53,12 @@ The file, shows meta-data for two stars, `Star_ID1`, and `Star_ID2` under the ``
 
 A full stellar input file can be found at this github link (xxx insert link). You'll see a number of different columns that you can use for your simulation. The file ``Input_StarFile_Description.xlsx`` contains information for all acceptable meta-data columns in your input stellar file, as well as column `descriptions`, `data type`, `units`, `parameter restrictions`, `examples` of the data, and whether the column is optional for the simulation or not. A copy of the file can be found below and at this link (xxx insert github link).
 
+.. _input_file_description_image-label:
+
+.. image:: _static/star_file_description_image.png
+   :alt: Screenshot of the contents of the user input description file. Interactive one below.
+
+
 .. raw:: html
 
    <div style="text-align: center;">
@@ -85,8 +90,8 @@ The photometric bands that can be included for SED and excess flux calculations 
 To see what the output of the modeling would look like with different meta-data in the stellar input file, check out the Jupyter Notebook tutorial at (XXX insert link).
 
 .. important::
-    The column strings should not have the asterisks. If the * columns are not included,
-    then the ** columns in the "optional" column are required. If the *** columns are included, then "changekeys" in the JSON file must be set to "true" for these columns to be used.
+    The column strings should not have the asterisks. If the \* columns are not included,
+    then the \*\* columns in the "optional" column are required. If the \*\*\* columns are included, then "changekeys" in the JSON file must be set to "true" for these columns to be used.
 
 .. important::
     To include spectral data columns, the parameter names should be in the following format: ``[band]m``, ``[band]me``, ``[band]_flux``, ``[band]_fluxe``. If the data is photometric, use ``[band]m``, and ``[band]me``, and the other two for fluxes in Jy.

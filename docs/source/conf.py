@@ -7,15 +7,15 @@ sys.path.insert(0, os.path.abspath('../..'))
 def setup(app):
     app.add_css_file('custom.css')
 
-nbsphinx_prolog = r"""
-.. raw:: html
-
-    <style>
-        .toctree-wrapper .caption, .toctree-wrapper ul {
-            display: none !important;
-        }
-    </style>
-"""
+# nbsphinx_prolog = r"""
+# .. raw:: html
+#
+#     <style>
+#         .toctree-wrapper .caption, .toctree-wrapper ul {
+#             display: none !important;
+#         }
+#     </style>
+# """
 # -- Project information -----------------------------------------------------
 
 project = 'twinkle'
@@ -44,7 +44,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinxcontrib.exceltable',
               'sphinxcontrib.xlsxtable',
               'sphinx.ext.mathjax',
-              'nbsphinx']
+              ]
 
 templates_path = ['_templates']
 
@@ -61,12 +61,14 @@ html_static_path = ['_static']
 
 html_css_files = ['custom.css']
 
+html_theme_options = {'navigation_depth': 4}
+
 html_logo = '_static/Logo/twinkle_logo_light.png'
 
 # Assuming your `conf.py` has a sibling folder called `_static` with these files
-html_theme_options = {
-   "logo": {
-      "image_light": "_static/Logo/twinkle_logo.png",
-      "image_dark": "_static/Logo/twinkle_logo_invert.png",
-   }
-}
+# html_theme_options = {
+#    "logo": {
+#       "image_light": "_static/Logo/twinkle_logo.png",
+#       "image_dark": "_static/Logo/twinkle_logo_invert.png",
+#    }
+# }

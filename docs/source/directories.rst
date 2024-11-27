@@ -1,5 +1,5 @@
-directories module
-==================
+directories.py Documentation
+=============================
 
 .. automodule:: twinkle.utils.directories
    :members:

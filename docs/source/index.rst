@@ -1,7 +1,3 @@
-.. twinkle documentation master file, created by
-   sphinx-quickstart on Tue Oct 15 22:19:40 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
 =========
 TWINKLE! 
@@ -30,15 +26,28 @@ Available Features
 
 - Plotting capabilities (link to plotting page upcoming) of the empirical data, and the modeled distribution.
 
-- This `Jupyter Notebook <https://github.com/astropatel/twinkle/blob/master/Twinkle_Tutorial.ipynb>` will give you a quick-start on using `Twinkle`.
+- This `Jupyter Notebook <https://github.com/astropatel/twinkle/blob/master/Twinkle_Tutorial.ipynb>`_ will give you a quick-start on using `Twinkle`.
 
 
 .. note:: The code hasn't been tested in a while so there will probably be issues with it that are still being worked on. If you want to contribute, fork and pull-request things up.
 
 
+
+Installation and Github
+*************************
+
+Here is the `Twinkle` `Github Link <https://github.com/astropatel/twinkle>`_.
+
+Feel free to fork it, install it, etc.
+
+.. code-block:: bash
+
+   pip install git+https://github.com/astropatel/twinkle.git
+
+
 .. toctree::
    :numbered:
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    set_up
@@ -46,10 +55,6 @@ Available Features
    model_data
    modules
 
-
-
-.. :class:`sed.blahblah`
-.. :meth:`sed.blahblah`
 
 
 The Logo

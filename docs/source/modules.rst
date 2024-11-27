@@ -6,5 +6,7 @@ Modules
 
     sed
     twinkle
+    directories
+    mosaic_tools
     sed_physics
 

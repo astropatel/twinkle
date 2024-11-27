@@ -9,7 +9,7 @@ The ``SEDTools`` class
    :show-inheritance:
 
 The ``DataLogistics`` class
-***********************
+****************************
 .. autoclass:: twinkle.sed.DataLogistics
    :members:
    :undoc-members:

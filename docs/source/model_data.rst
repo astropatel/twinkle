@@ -1,5 +1,5 @@
 Model Data
-########################
+===============
 
 Stellar Grid Models
 *********************
@@ -16,10 +16,10 @@ For quick access you can find the models on the Github page, (XXXX - link here)
 
 .. note:: You can set the model you want to use in the stellar input file (xxx insert link to page) under the ``model`` column, and this can be changed for different stars in your input file.
 
-
+.. _atlas9-label:
 
 ATLAS9
-=======
+*******************
 
 A description of the `ATLAS9` models can be found in this file :download:`README <_static/README_ATLAS9.txt>`. It includes a description of model temperature ranges, wavelength ranges, and grid steps. There's also a table of which models are optimal for a given spectral type.
 
@@ -63,8 +63,10 @@ Each file has a Primary header, and a second Binary Table that has 12 columns, t
 We can see the Binary Table is a 1221 row by 12 column table, where the values in the row for the ``WAVELENGTH`` column is the wavelength of the flux, and the values in all the other columns are the flux at a given wavelength for the surface gravity listed in the column name (g00, g05, etc.)
 
 
+.. _nextgen-label:
+
 NextGen
-========
+*******************
 
 As I mentioned before, you should specify to the code to use the NextGen atmospheric grid models for spectral types A-K. I originally downloaded the spectra (.spec) files from the late Dr. France Allard's page.
 
@@ -74,6 +76,7 @@ The current processed files are in the NextGen folder with each file labeled in 
 
 Each of these files is created using the (XXX module - treat_NextGenSpecModels) function, which loads the raw spec files, and outputs the `lte` format text files. The spec files are provided, so feel free to extract more spec files for your use. These currently include Z=-0.5, 0, 0.5,. If you want more, either download them yourself, or contact me.
 
+.. _RSR_Description-label:
 
 Photometric Filter Response Curves
 ************************************

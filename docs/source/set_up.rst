@@ -1,5 +1,5 @@
 Set-Up
-###########
+===========
 
 .. toctree::
    :maxdepth: 2
@@ -7,11 +7,13 @@ Set-Up
 
 
 JSON Parameterfile
-===================
+*******************
 
 The heart of `Twinkle` lies in the input parameter file, which is in JSON format. This file is essential for configuring `Twinkle`, including specifying the data folder structure, the names of relevant data files, the photometric bands used to fit the stellar spectral energy distribution (SED), plotting options, and more.
 
-You can find an example JSON parameter file for `Twinkle` here: [Insert GitHub Link].
+.. _json_parameterfile_link-label:
+
+You can find an example JSON parameter file for `Twinkle` here: `JSON Parameter File <https://github.com/astropatel/twinkle/blob/master/paramfile.json>`_.
 
 The JSON parameter file is organized as a dictionary. It contains boolean values, as well as dictionaries whose members are booleans, strings, arrays, integers, or floats. Below is the full JSON file, followed by descriptions of each section:
 
@@ -48,18 +50,21 @@ folders | files
 
 This section contains the names of relevant directories and files for running the code, as well as booleans for writing data to file. In parantheses are the current names listed in the example parameter file.
 
-Directory names:
+**Directory names**:
+
 - ``topdir``: The top-level directory for the data (`twinkle-master`).
 - ``supportdir``: Directory for support files (`Inputs_and_Models`).
 
-Empirical File Names:
+**Empirical File Names**:
+
 - ``starfile``: Filename for stellar data (`sample_stardata.txt`).
 - ``input_stars``: Filename for input stars (`select_stars.txt`).
 - ``bv_colorfile``: Empirical color file (`EMamajek_MSColors.txt`).
 
 The names of all the parameters so far can be changed to whatever your heart desires.
 
-Write booleans parameters:
+**Write booleans parameters**:
+
 - ``write2file``: Boolean indicating whether to write to a file.
 - ``write_sed``: Boolean indicating whether to write SED data to a file.
 
@@ -83,7 +88,7 @@ spec_sample
 The **spec_sample** section defines parameters for sampling the spectrum.
 
 - ``wave_min``: Minimum wavelength in angstroms (e.g., 2000Å - float).
-- ``wave_max``: Maximum wavelength for calculations (angstroms - float).
+- ``wave_max``: Maximum wavelength for calculations (Å - float).
 - ``gridpts``: Number of grid points to sample across the spectrum (int).
 
 phot
@@ -111,13 +116,17 @@ For example, if I set:
      "mags2use0_original" : ["BJ","VJ","J2M","H2M","Ks2M","W1","W2","W3","W4","HPACS160_flux","HPACS100_flux"],
     }
 
-Then the code will allow the use of the Johnson **B**, and **V** bands, 2MASS **J**, **H**, **Ks**, and WISE All-Sky bands 1 through 4 in the simulation. If you set ``mags4Phot0_original`` to only use the optical and short-wave IR bands, then those are the bands that will be used to fit the photospheric data.
+Then the code will allow the use of the Johnson **B**, and **V** bands, 2MASS **J**, **H**, **Ks**, and WISE All-Sky bands 1 through 4 in the simulation.
+
+If you set ``mags4Phot0_original`` to only use the optical and short-wave IR bands, then those are the bands that will be used to fit the photospheric data.
 
 .. important::
     You can insert any string combination of band descriptors into the different ``phot`` parameters in the parameterfile, so long as it also exists in ``mags2use0_original``.
 
 .. important::
-    The photometric descriptors used in the string arrays can be found in the `/Inputs_and_Models/RSR/available_filters.txt` (XXXX - link to github file) and is listed below. Information on the data sources for can be found in XXXXXXX (info on spectral response curves). Captilization matters.
+    The photometric descriptors used in the string arrays can be found in the `/Inputs_and_Models/RSR/Filters_README.txt <https://github.com/astropatel/twinkle/blob/master/Inputs_and_Models/RSR/Filters_ReadME.txt>`_  and is listed below. This file also contains information on the data sources for these relative spectral response curves. Captilization matters of each file matters.
+
+.. _rsr_filters_readme-label:
 
 .. raw:: html
 
@@ -149,17 +158,17 @@ The **WISE_excess** section defines WISE photometry cuts for identifying excess 
 - ``W12_cut``: Cutoff for W1 an d W2 excess.
 
 Data Files and Folder Structure
-=====================================
+******************************************
 
 
 Directory Structure
 ---------------------
 
-Once you've installed Twinkle and it is included in your path, you'll need to set-up your working-folder which will contain input data to model the stellar spectral energy distribution of a given target, and the empirical data the code will use to perform that calculation.
+Once you've installed `Twinkle` and it is included in your path, you'll need to set-up your working-folder which will contain input data to model the stellar spectral energy distribution of a given target, and the empirical data the code will use to perform that calculation.
 
-You can download the current data and folders from the Github page (INSERT GITHUB LINK).
+You can download the current data and folders from the `Github project page <https://github.com/astropatel/twinkle/tree/master>`_. The `twinkle` package need not be in your working directory as long as it's in your ``PYTHONPATH``.
 
-The data [CHECK TO SEE HWO DIRECTORIES.PY WORKS AND CHANGE SO THAT IT PULLS INFO FROM SPECS -- AT LEAST THE TOP DIRECTORY] should be in the structure shown in the first panel below. The code will use information from the ``folders`` and ``files`` elements of the JSON parameterfile [INSERT LINK TO LAST SECTION] to identify which folder to pull data from. The color-coding in the below directory structure is as follows:
+The data should be in the structure shown in the first panel below. The code will use information from the ``folders`` and ``files`` elements of the :ref:`JSON parameterfile <json_parameterfile_link-label>` to identify which folder to pull data from. The color-coding in the below directory structure is as follows:
 
 .. raw:: html
 
@@ -231,7 +240,7 @@ You need to make sure that ``folders``/``topdir`` points to where the folder is 
                 ├── W2_WISE.dat
                 ├── W3_WISE.dat
                 ├── W4_WISE.dat
-                └── available_filters.txt
+                └── Filters_ReadME.txt
     </pre>
 
 .. raw:: html
@@ -310,7 +319,7 @@ Sure. You could ask that.
                 ├── W2_WISE.dat
                 ├── W3_WISE.dat
                 ├── W4_WISE.dat
-                └── available_filters.txt
+                └── Filters_ReadME.txt
     </pre>
 
 
@@ -344,39 +353,51 @@ This folder contains the synthetic stellar grid models, relative spectral respon
 RSR/
 ^^^^^
 
-Spectral response functions corresponding to the identifiers in the available photometric filters file (link to table above).
+Relative spectral response (RSR) data corresponding to the identifiers in the available photometric filters file (link to table above).
 
+* :ref:`Available filters list<rsr_filters_readme-label>`
+* `Data for all the filters <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/RSR>`_
+* :ref:`Description for RSR folder and filters<RSR_Description-label>`
 
 ['files']['bv_colorfile'] | (e.g., EMamajek_MSColors.txt)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This file contains empirical color relations for all stellar spectral types. The data is taken from Dr. Eric Mamajek's carefully maintained color tables (xxx link to eric's page). The file can be found here on the github page (xxx github page link).
+This file contains empirical color relations for all stellar spectral types. The data is taken from `Dr. Eric Mamajek's <https://www.pas.rochester.edu/~emamajek/>`_ carefully maintained `color tables <https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt>`_.
 
-['files']['starfile'] | (e.g., sample_stardata.txt)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The file used by `Twinkle` can be found `on the github page <https://github.com/astropatel/twinkle/blob/master/Inputs_and_Models/EMamajek_MSColors.txt>`_.
 
-This file contains tabular tsv data for each star whose SED you wish to model. Each row contains meta-data and empirical photometric information for a single star, and the columns correspond to different meta-data information. Information on how to build the starfile can be found here [XXX INSERT LINK TO PAGE].
+.. warning:: Dr. Eric Mamajek's tables are constantly being updated, and the table used by the simulation may be outdated. Take this into consideration when using the table on Github.
 
+['files']['starfile'] | (e.g., sample_stardata.txt, sample_stardata_simple.txt)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This file contains tabular tsv data for each star whose SED you wish to model. Each row contains meta-data and empirical photometric information for a single star, and the columns correspond to different meta-data information. Information on how to build the starfile can be found on the :doc:`User Input File page<input_data>`.
+
+.. note:: future version of the user input file will be an Excel workbook.
 
 Input_StarFile_Description.xlsx
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-File containing descriptions of the meta data for the stellar input data the code will use in the grid model fitting (xx - link to github files).
+File containing descriptions of the meta data for the stellar input data the code will use in the grid model fitting. `Here's the link <https://github.com/astropatel/twinkle/blob/master/Inputs_and_Models/~%24Input_StarFile_Description.xlsx>`_.
+
+You can also check out the contents on the User Input File page :ref:`here<input_file_description_image-label>`
 
 StellarGridModels/
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Contains stellar grid models. Links to the provided models (ATLAS9 and NextGen) are here.
+Contains atmospheric stellar grid models. Links to the models (ATLAS9 and NextGen) on the Github page are `here <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/StellarGridModels>`_.
+
+Description to the atmopsheric models can be found on the :doc:`Model Data<model_data>` page.
 
 ATLAS9/
 ^^^^^^^^
 
-These models are in FITS format (more description to come). Currently, I provide models with Solar Metallity of (more info later)
+These are the `Kurucz Atlas 9 <https://ui.adsabs.harvard.edu/abs/1993yCat.6039....0K/abstract>`_ models and are in FITS format. More information can be found in the :ref:`ATLAS9 section on the Model Data page<atlas9-label>`.
 
 NextGen/
 ^^^^^^^^^
 
-These are in text file format. More information to come.
+These are the `NextGen` atmospheric models (`Hauschildt et al. 1999 <https://iopscience.iop.org/article/10.1086/306745>`_) models. More information can be found in the :ref:`NexstGen section on the Model Data page<nextgen-label>`.
 
 
 
