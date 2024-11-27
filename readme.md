@@ -1,8 +1,10 @@
 # TWINKLE!
 
+![Twinkle Logo](docs/source/Logo/twinkle_logo_light.png')
+
 ## ReadtheDocs
 
-Check out the [Twinkle ReadTheDocs Instructure](https://twinkle.readthedocs.io/en/latest/)
+**Check out the [Twinkle ReadTheDocs Instructure](https://twinkle.readthedocs.io/en/latest/)**
 
 ## Introduction
 
