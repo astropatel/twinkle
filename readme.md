@@ -1,6 +1,7 @@
-# TWINKLE!
 
-![Twinkle Logo](./docs/source/_static/Logo/twinkle_logo_light.png)
+<div align="center">
+<img src="./docs/source/_static/Logo/twinkle_logo_light.png" alt="Twinkle Logo" width="35%">
+</div>
 
 ## ReadtheDocs
 
