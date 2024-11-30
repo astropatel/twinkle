@@ -43,15 +43,6 @@ _KB = con.k_B.to('erg/K').value
 _CM2ANG = 100000000.0
 _ANG2CM = 1e-8
 
-#  DICTIONARY TO HOUSE ALL THE PHOTOSPHERIC MODELS EVENTUALLY
-MegaGrid = {}
-
-#  DICTIONARY THAT CONTAINS ALL THE EMPIRICAL STELLAR COLOR DATA
-EmpDat = {}
-
-#  DICTIONARY THAT CONTAINS ALL DATA FROM A DATA INPUT FILE
-StarsDat = {}
-
 
 class SEDTools:
     r"""
@@ -407,7 +398,7 @@ class SEDTools:
         """
 
         fluxJy = (10 ** 23.0) * 10 ** (
-                    -(abmags + 48.6) / 2.5)  # converts to AB Mag
+                -(abmags + 48.6) / 2.5)  # converts to AB Mag
         alam = 3e-13  # converts to erg s-1 cm-2 angstrom-1 with lam in microns (for some stupid reason)
         errLmic = band.isoWavelength() * (1e-10 / 1e-6)
         # band.pivotWavelength()
@@ -464,7 +455,7 @@ class SEDTools:
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         mag_lam = -2.5 * np.log10(flux / Fiso)
         mag_lam_err = (1. / Fiso) * (2.5 / np.log(10)) * fluxErr / 10 ** (
-                    mag_lam / -2.5)
+                mag_lam / -2.5)
         return mag_lam, mag_lam_err
 
     def mag2fluxZPLam(self, band, Vmag, VmagErr, sysErr=False):
@@ -718,7 +709,7 @@ class SEDTools:
 
         Returns:
             Array of fluxes calculated at argument wavelengths in units of
-            :math: \frac{\mbox{ergs}}{{cm}^2 s A}
+            :math:`\frac{\mbox{ergs}}{{cm}^2 s A}`
         """
         temp0 = p0[0]
         try:
@@ -1131,40 +1122,44 @@ class SEDTools:
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
         gc = _H * _CS / _KB
         func1 = np.log10(((np.exp(gc / (l2 * T0)) - 1) / (
-                    np.exp(gc / (l1 * T0)) - 1)) * Ratio ** (-1))
+                np.exp(gc / (l1 * T0)) - 1)) * Ratio ** (-1))
         func2 = (gc / (T0 * lam0)) * np.exp(gc / (lam0 * T0)) / (
-                    np.exp(gc / (lam0 * T0)) - 1)
+                np.exp(gc / (lam0 * T0)) - 1)
         func = func1 / (np.log10(l2 / lam0)) + func2 - 5.
         return func
 
-    def photosphere(self, p0,
-                    su2ea2, modelinfo,wave=(2000, 1e7), gridpts=10000):
-        r"""Calculates the photospheric emission line from grid models
-            given relevant Args and griddata and temperature array,
-            and range of wavelength to calculate emission for. Usually this
-            should not exceed the limits for the grid models. If limits are exceeded
-            flux is extrapolated linearly in log-log space, following Rayleigh-Jeans
-            law.
+    def photosphere(self, p0, su2ea2, modelinfo, MegaGridModels,
+                    wave=(2000, 1e7), gridpts=10000,):
+        r"""
+        Calculates the photospheric emission line from grid models
+        given relevant Args and griddata and temperature array,
+        and range of wavelength to calculate emission for. Usually this
+        should not exceed the limits for the grid models. If limits are exceeded
+        flux is extrapolated linearly in log-log space, following Rayleigh-Jeans
+        law.
 
-            Args:
-                p0 (arr): Args to be passed to SEDTools.calc_grids.
-                su2ea2 (float): Normalization to be passed to SEDTools.calc_grids.
-                modelinfo (arr): Multi-dimensional array to be passed to sed.SEDTools.calc_grids
-                wave (tuple/arr): tuple or array of 2 elements; min and max of
-                    wavelength for flux to be calculated.
-                    Be consistent with units. (angstroms)
-                gridPts (int): Integer value for how many grid points you want
-                    returned (aka resolution)
+        Args:
+            p0 (arr): Args to be passed to SEDTools.calc_grids.
+            su2ea2 (float): Normalization to be passed to SEDTools.calc_grids.
+            modelinfo (arr): Multi-dimensional array to be passed to :meth: `sed.SEDTools.calc_grids`
+            wave (tuple/arr): tuple or array of 2 elements; min and max of
+                wavelength for flux to be calculated.
+                Be consistent with units. (angstroms)
+            gridPts (int): Integer value for how many grid points you want
+                returned (aka resolution)
+            MegaGridModels (dict): all atmospheric grid models with metallicity,
+                grav, and temperature keys.
 
-            Returns:
-                [xphot, fluxphot, slope, yint]
-                xphot: wavelength array
-                fluxphot: photospheric flux sampled/extrapolated at xphot
-                slope: slope of extrapolated Rayleigh-Jeans line
-                yint: y-intercept of Rayleigh-Jeans line obviously,
-                the last two are in log space
-            """
+        Returns:
+            [xphot, fluxphot, slope, yint]
+            xphot: wavelength array
+            fluxphot: photospheric flux sampled/extrapolated at xphot
+            slope: slope of extrapolated Rayleigh-Jeans line
+            yint: y-intercept of Rayleigh-Jeans line obviously,
+            the last two are in log space
+        """
 
+        MegaGrid = MegaGridModels
         tempStar = p0[0] * 1000.
         try:
             su2eaRJ = (p0[1] ** 2) * su2ea2
@@ -1190,13 +1185,13 @@ class SEDTools:
             # CUT UP X ARRAY -- grid part and extroplation part
 
             ind_cut1, ind_cut2 = np.where(xphot < lamcut)[0], \
-            np.where(xphot >= lamcut)[0]
+                np.where(xphot >= lamcut)[0]
             xphot1, xphot2 = xphot[ind_cut1], xphot[ind_cut2]
             # yphot1 USES GRIDS, WHILE yphot2 USES RAYLEIGH-JEANS
             yphot1 = self.calc_grids(xphot1, p0, su2ea2, griddata, tempArr)
             # USE RAYLEIGH-JEANS FOR EXTRAPOLATION
             yphot2 = (np.pi * 1.4) * su2eaRJ * _CS * _KB * tempStar / (
-                        xphot2 * _ANG2CM) ** 3
+                    xphot2 * _ANG2CM) ** 3
             yphot2 = yphot2 / xphot2
             # PUT IT ALL TOGETHER
             xphot = np.concatenate([xphot1, xphot2])
@@ -1263,7 +1258,7 @@ class SEDTools:
         return norm_wise_nir, yphot, yphot_unsc, RJ_On
 
     def fit_photosphere(self, xlam, yfluxdat, p0, su2ea2,
-                        modinfo, magfit, func):
+                        modinfo, magfit, func, MegaGridModels):
         r"""
         Find the best fit photospheric model to the photometric data.
         Fits are done using mpfit (Levenberg-Marquardt algorithm).
@@ -1274,18 +1269,21 @@ class SEDTools:
             yfluxdat (arr): Flux of the data at wavelengths in xlam to be fit.
             p0 (arr): Initial Args for temperature and stellar radius.
                 Temperature is required, Radius is not.
-            su2ea2 (float): Scaling factor :math: \frac{R_{sun}^2}{d_{star}^2}
+            su2ea2 (float): Scaling factor :math:`\frac{R_{sun}^2}{d_{star}^2}`
             modinfo (str): Which model type to use based on (model name, log(g),
                 metallicity) to be used as keys in MegaGrid.
             magfit (dict): String arrays of band identifiers keyed by 'photmags'
                 (bands used to fit the model) and 'scalemags' (which bands to
                 use to scale the raw stellar flux to observed flux to first order).
             func (obj): Function to use to fit the data.
+            MegaGridModels (dict): all atmospheric grid models with metallicity,
+                grav, and temperature keys.
 
         Returns:
             Fitted stellar radius, temperature and mpfit object.
         """
 
+        MegaGrid = MegaGridModels
         gdat = MegaGrid[modinfo]
         mg4phot = magfit['photmags']
         mg4scale = magfit['scalemags']
@@ -1385,10 +1383,10 @@ class SEDTools:
         x0, y0 = y[0], y[1]
         sigx, sigy = yerr[0], yerr[1]
         alpha = ((a * x0 / sigx ** 2) + (b * y0 / sigy ** 2)) / (
-                    (a / sigx) ** 2 + (b / sigy) ** 2)
+                (a / sigx) ** 2 + (b / sigy) ** 2)
 
         FluxNormed = (alpha * (
-                    Predicted.transpose() * kcorList).transpose()).transpose()
+                Predicted.transpose() * kcorList).transpose()).transpose()
         res = np.subtract(FluxNormed, y)
         return res, FluxNormed, alpha
 
@@ -1409,24 +1407,30 @@ class DataLogistics:
             jfile
         """
 
-        self.specs = {}
-
+        # PROCESS JSON PARAMETERFILE
         script = open(jfile).read()
         self.specs = json.loads(script)
 
+        # INSTANTIATE DIRECTORY PATHS AND FILE OBJECTS
         supportdir = DIR.SupportFiles()
         starfile = opj(supportdir, 'StellarInputFiles',
-                       self.specs['files']['starfile'])
+                       self.specs['files']['input_user_starfile'])
 
         empfile = opj(supportdir, self.specs['files']['bv_colorfile'])
+        sheet_name = self.specs['files']['input_stars_sheet']
         print(f'Empirical Color File: {empfile}')
-        print(f'Input User File: {starfile}')
+        print(f'Input User File {starfile} using sheet {sheet_name}')
 
-        self.loadAllStars(starfile, self.specs['changekeys'])
-        self.loadAllModels()
-        self.loadEmpiricalData(empfile)
+        # DATAFRAME THAT CONTAINS ALL DATA FROM A DATA INPUT FILE
+        self.StarsDat = self.loadAllStarsExcel(starfile, sheet_name,
+                                               self.specs['changekeys'])
+        # DICTIONARY THAT CONTAINS ALL THE EMPIRICAL STELLAR COLOR DATA
+        self.EmpDat = self.loadEmpiricalData(empfile)
+        # LOAD ALL RELEVANT ATMOSPHERIC GRID MODELS
+        #  DICTIONARY TO HOUSE ALL THE PHOTOSPHERIC MODELS EVENTUALLY
+        self.MegaGrid = self.loadAllModels()
 
-    def show_parameterfile(self,indent=3):
+    def show_parameterfile(self, indent=3):
         r"""
         Show the contents of the JSON parameterfile
         """
@@ -1435,13 +1439,57 @@ class DataLogistics:
         print(specs_formatted_str)
 
     def print_input_file(self):
-        ...
-        df = pd.DataFrame(StarsDat)
-        print(df)
+
+        print(self.StarsDat)
+
+    def loadAllStarsExcel(self, starfile, sheet_name=1, changekeys=True):
+
+        r"""
+        Loads all data into a dictionary from starfile.
+        If changekeys is active, it will try to replace the
+        saturated corrected photometry keywords to standard
+        WISE keywords.
+
+        Unsaturated WISE photometry can be corrected using
+        procedures found in Patel,+2014.
+
+        Need to add in part about self-correcting
+        the photometry instead of relying on input.
+
+        Args:
+            starfile (str/pathfile): file name and path
+            sheet_name (str): Which sheet in the file to use. Default is the
+                first one
+            changekeys (bool): Whether to replace the WISE saturated corrected
+                photometry keywords to standard WISE keywords."
+
+        """
+
+        StarsData = pd.read_excel(starfile, sheet_name=sheet_name)
+        # df = df.transpose().reset_index()
+        # df.columns = df.iloc[0]
+        # StarsData = s.drop(0)
+        #StarsData.reset_index(drop=True, inplace=True)
+        StarsData.set_index('MainName', inplace=True)
+
+        colnames = StarsData.columns
+
+        if changekeys:
+            if 'W1mC' in colnames:
+                StarsData.rename(columns={'W1m': 'W1mC',
+                                         'W1me': 'W1meC'})
+            if 'W2mC' in colnames:
+                StarsData.rename(columns={'W2m': 'W2mC',
+                                         'W2me': 'W2meC'})
+
+        return StarsData
 
     def loadAllStars(self, starfile, changekeys):
 
         r"""
+        .. deprecated:: 1.1
+            Use :meth:`loadAllStarsExcel` instead.
+
         Loads all data into a dictionary from starfile.
         If changekeys is active, it will try to replace the
         saturated corrected photometry keywords to standard
@@ -1456,6 +1504,7 @@ class DataLogistics:
             starfile (str): file name and path
             changekeys ():
         """
+
         if len(StarsDat) == 0:
             # todo: change this to pandas dataframe
             # dat = pd.read_csv(starfile, sep=None)
@@ -1471,7 +1520,7 @@ class DataLogistics:
                 if 'W1mC' in colnames:  # np.any(colnames == 'W1mC'):
                     StarsDat['W1m'] = StarsDat.pop('W1mC')
                     StarsDat['W1me'] = StarsDat.pop('W1meC')
-                if 'W1mC' in colnames:  # np.any(colnames == 'W2mC'):
+                if 'W2mC' in colnames:  # np.any(colnames == 'W2mC'):
                     StarsDat['W2m'] = StarsDat.pop('W2mC')
                     StarsDat['W2me'] = StarsDat.pop('W2meC')
 
@@ -1490,10 +1539,14 @@ class DataLogistics:
 
         """
 
-        if len(EmpDat) == 0:  # is not None:
-            dfemp = ascii.read(filename, comment='#')
-            EmpDat['dat'] = dfemp
+        empirical_data = pd.read_csv(filename, sep='\t')
 
+        return empirical_data
+
+        # if len(EmpDat) == 0:  # is not None:
+        #     dfemp = ascii.read(filename, comment='#')
+        #     EmpDat['dat'] = dfemp
+        #
             # dat = EmpDat['test']
 
     def loadAllModels(self):
@@ -1503,14 +1556,13 @@ class DataLogistics:
         Everything is sorted in a dictionary with keys of
         (model, log(g), metallicity).
         """
+        MegaGrid = {}
+        allg = np.unique(self.StarsDat['grav'])
+        allmet = np.unique(self.StarsDat['met'])
+        allmod = np.unique(self.StarsDat['model'])
 
-        allg = np.unique(StarsDat['grav'])
-        allmet = np.unique(StarsDat['met'])
-        # allmod = np.unique(StarsDat['model'])
-        allmod = np.unique(StarsDat['model'])
-
-        print('---------')
-        print('      Loading All Gridmodels   ')
+        print('-------------------------------')
+        print('Loading All Gridmodels...\n')
 
         for mod in allmod:
             for z in allmet:
@@ -1520,9 +1572,10 @@ class DataLogistics:
                                                         f'get_{mod}Grids')(g, z)
                         print(f'Loaded {mod} of g={g}, met={z}')
 
-        print('       Done Loading Models     ')
-        print('---------')
+        print('\nDone Loading Models.')
+        print('-------------------------------')
 
+        return MegaGrid
 
 class GridModels:
     @staticmethod
@@ -1607,7 +1660,7 @@ class GridModels:
                         gridnp = np.vstack(([gridi], [grid_i1]))
                     else:
                         print('Grids are not matched between %d, %d' % (
-                        tempArr[i], tempArr[i + 1]))
+                            tempArr[i], tempArr[i + 1]))
 
                 i += 2
             else:
@@ -1625,7 +1678,7 @@ class GridModels:
                         gridnp = np.vstack((gridnp, [gridi]))
                     else:
                         print('Grids are not matched between %d, %d' % (
-                        tempArr[i], tempArr[i - 1]))
+                            tempArr[i], tempArr[i - 1]))
 
                 i += 1
         lam_arr_all = gridnp[:, 0]
@@ -1666,15 +1719,15 @@ class GridModels:
             grav = 'g' + grav
         if met.find('p') == -1:
             met = 'p0' + met
-
+        # todo: add stellargridmodels to directories
         # CHANGE DIRECTORY TO NEEDED METALLICITY FILE
         dirmod = opj(intpdir, 'StellarGridModels', model, 'k' + met)
         # THIS SELECTS OUT ONLY THE FILES THAT MEET THE METALLICITY
         # CRITERIA
         filesGrid = glob.glob(opj(dirmod, 'k' + met + '*.fits'))
         if len(filesGrid) < 1:
-            raise ValueError(
-                'There were no files matching your criteria. Try again.')
+            raise ValueError('There were no files matching your criteria.'
+                             ' Try again.')
 
         ddat = {}
         tempArr = np.array([])
@@ -1684,7 +1737,7 @@ class GridModels:
                 hdui = fits.open(f)
                 ti = hdui[0].header['TEFF']
             except:
-                print("Something's wrong with %s" % f)
+                print(f"Something's wrong with {f}")
             tbdata = hdui[1].data
             colnames = np.array(hdui[1].columns.names)
             # CHECK TO SEE IF GRAVITY SELECTED IS IN FITS FILE
@@ -1807,7 +1860,7 @@ class GridModels:
                     DataOut = np.column_stack(
                         (wavKeep, ((fluxKeep) / conv2ang)))
                     fileout = opj(newdir, 'lteNextGen_%.1f_%.1f_%.1f.txt' % (
-                    temp, grav, met))
+                        temp, grav, met))
                     np.savetxt(fileout, DataOut)
                 else:
                     pass

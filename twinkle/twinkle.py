@@ -18,8 +18,6 @@ logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
 
 STools = sed.SEDTools()
 
-DataStuff = None
-
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>, Joe Trollo'
 
 #  set up constants
@@ -50,34 +48,27 @@ x_wav_label_microns = r'$\lambda\ [\mu m]$'
 class Fuel:
     """
     This should be called before all others.
-    Initialization process loads the input script file, uploads
-        and saves the data of the input star file, empirical color
-        file, photospheric grid models and is accessible through sed.py
-        global variables
+    Initialization process loads the input script file, uploads and saves the
+    data of the input star file, empirical color file, photospheric grid models
+    and is accessible through :class:`sed.DataLogistics`
     """
 
     def __init__(self, jfile):
         """
         Loads the user input parameter file data
 
-        Parameters
-        ----------
-        jfile: (str) json file of inputs
+        Args:
+            jfile: (str) json file of inputs
         """
         #  Load data from starfile
         #  Load data from empirical color file
-        global DataStuff
+
         if not os.path.isfile(jfile):
             raise ValueError(f'{jfile} is not a file.')
         # CHECK TO SEE IF DICTIONARY OF STELLAR DATA HAS BEEN POPULATED
-        if not sed.StarsDat:
-            # THIS RUNS THE ENTIRE PROCESS OF LOADING AND SAVING THE
-            # EMPIRICAL DATA
-            try:
-                DataStuff = sed.DataLogistics(jfile)
-            except ValueError as Err:
-                logging.info(f'JSON is trippin cause of, {Err}', )
-                raise ValueError(Err)
+        self.data_manager = sed.DataLogistics(jfile)
+        logging.info(f'JSON parameterfile used:, {jfile}')
+
 
 class Star:
     """
@@ -93,25 +84,37 @@ class Star:
         input photometry.
 
         FYI: I get bored and some of the print statements may be... odd.
-
     """
 
-    def __init__(self, sid=None, starname=None):
+    def __init__(self, fuel, starname=None):
         """
+
         Instantiates a "twinkling star" object (funny, I know).
 
-        Parameters
-        ----------
-        sid: (int) index in reference to star in stellar file
-        starname: (str) Name of star in MainName column of stellar file
-                    Providing both sid and starname will halt execution.
+        Args:
+            fuel (twinkle.Fuel class obj)
+            starname (str):  Name of star in MainName column of stellar file
+                        Providing both sid and starname will halt execution.
+
         """
 
-        self.sid = sid
+        self.starsdat = fuel.data_manager.StarsDat
+        self.MegaGrid = fuel.data_manager.MegaGrid
+        self.emdat = fuel.data_manager.EmpDat # sed.EmpDat['dat']
+        specs = fuel.data_manager.specs
+
         self.starname = starname
 
-        self.starsdat = sed.StarsDat
-        self.emdat = sed.EmpDat['dat']
+        #  Find star in file if name given
+        if self.starname:
+            try:
+                self.star_dat_i = self.starsdat.loc[self.starname]
+                logging.info(f'WORKING STAR:{self.starname}')
+            except ValueError:
+                print(f'{self.starname} was not found in the input file')
+
+        else:
+            raise ValueError('Provide either name of location index, not both.')
 
         #  Set saturation limits for various bands
         #  Might need to put this in JSON file.
@@ -135,43 +138,26 @@ class Star:
         self.StarRadius, self.StarTemp = None, None
         self.mfit = None
 
-        #  Find star in file if name given otherwise
-        #  find it based on input index.
-        if self.sid is None and self.starname is not None:
-            ind = np.where(self.starsdat['MainName'] == self.starname)[0]
-            if len(ind) == 0:
-                raise ValueError(f"{self.starname} was not found in the input file")
-            else:
-                self.sid = ind[0]
-                self.starname = self.starsdat['MainName'][self.sid]
-
-        elif self.sid is None and self.starname is None:
-            raise ValueError('No object index or ID was provided')
-
-        elif self.sid is not None and self.starname is not None:
-            raise ValueError('Provide either name of location index, not both.')
-        logging.info('WORKING STAR:{}'.format(self.starname))
-
         # ADD PHOTOMETRY FROM MAGNITUDE LIST IN JSON FILES
         # REMOVE SATURATED BANDS AND REPLACE NULL VALUES
         # vegaMagDict and errdict ARE FILLED UP HERE.
-        self.cleanphotometry(DataStuff.specs)
-        specs = DataStuff.specs
-        #  ========================================
+
+        self.cleanphotometry(specs)
+
         #  Gather up basic stellar info from file
-        #  ========================================
-        self.disti = 1000. / self.starsdat['plx'][self.sid]
-        self.spti = self.starsdat['spt'][self.sid]
-        self.met = self.starsdat['met'][self.sid]
-        self.modeli = self.starsdat['model'][self.sid]
+        self.disti = 1000. / self.star_dat_i['plx']
+        self.spti = self.star_dat_i['spt']
+        self.met = self.star_dat_i['met']
+        self.modeli = self.star_dat_i['model']
 
         self.su2ea = CONST_1 / self.disti ** 2
         self.su2ea_dust = CONST_2 / self.disti ** 2
 
         #  Obtain grav and met from file or guess based on B-V
-        self.g = self.starsdat['grav'][self.sid]
-        self.T0 = self.starsdat['temp'][self.sid] / 1000.
+        self.g = self.star_dat_i['grav']
+        self.T0 = self.star_dat_i['temp'] * 1e-3
         bv = self.emdat['B-V']
+
         try:
             bvi = self.vegaMagDict['BJ'] - self.vegaMagDict['VJ']
 
@@ -184,25 +170,21 @@ class Star:
         if self.T0 is None:
             self.T0 = self.emdat['Tinit'][indebv] / 1000.
 
-        # except KeyError:
-        # ================================================================
-        #                      Convert Photometry to Flux
-        # ================================================================
-
+        # Convert Photometry to Flux
         self.fluxTup = STools.batch_mag2fluxZPLam(self.mags2use,
                                                   self.vegaMagDict,
                                                   self.vegaMagErrDict)
 
-        self.flux, self.fluxerr = self.fluxTup  # self.fluxTup[0], self.fluxTup[1]
+        self.flux, self.fluxerr = self.fluxTup
         self.wave = STools.get_eff_wavelengths(self.mags2use)
 
-        # ================================================================
-        #                      FIT PHOTOSPHERE
-        # ================================================================
+        # FIT PHOTOSPHERE
 
         if specs['fitphot']:
             self.fitPhotosphere(self.su2ea, self.T0,
-                                self.modeli, self.g, self.met)
+                                self.modeli, self.g, self.met,
+                                self.MegaGrid)
+
             params, perror = self.mfit.params, self.mfit.perror
             self.p_up, self.p_down = params + perror, params - perror
 
@@ -213,17 +195,22 @@ class Star:
                                  specs['spec_sample']['wave_max']
             gridpts = specs['spec_sample']['gridpts']
             modelinfo = (self.modeli, self.g, self.met)
-            self.StarPhotosphere = STools.photosphere([self.StarTemp / 1000., self.StarRadius],
+            self.StarPhotosphere = STools.photosphere([self.StarTemp / 1000.,
+                                                       self.StarRadius],
                                                       self.su2ea, modelinfo,
+                                                      self.MegaGrid,
                                                       wave=(wave_min, wave_max),
                                                       gridpts=gridpts)
 
             StarPhot1 = STools.photosphere(self.p_up,
                                            self.su2ea, modelinfo,
+                                           self.MegaGrid,
                                            wave=(wave_min, wave_max),
                                            gridpts=gridpts)
+
             StarPhot2 = STools.photosphere(self.p_down,
                                            self.su2ea, modelinfo,
+                                           self.MegaGrid,
                                            wave=(wave_min, wave_max),
                                            gridpts=gridpts)
 
@@ -239,29 +226,30 @@ class Star:
             for band in self.mags2use:
                 flxt = STools.rsr_flux(getattr(STools, f'{band}pband'),
                                        *self.StarPhotosphere)[0]
-                self.photFlux['%s' % band] = flxt
+                self.photFlux[f'{band}'] = flxt
 
         else:
 
-            logging.info('Photosphere fit not requested for %s.' % self.starname)
+            logging.info(f'Photosphere fit not requested for {self.starname}')
             if specs['scalephot']:
                 new_phot = STools.scaleSED2bands(specs['phot']['scaleSEDbands'],
-                                                 self.mags2use, self.StarPhotosphere[1],
-                                                 self.flux, self.fluxerr, self.photFlux)
+                                                 self.mags2use,
+                                                 self.StarPhotosphere[1],
+                                                 self.flux, self.fluxerr,
+                                                 self.photFlux)
 
                 phot_norm_fac, yphot, yphot_unsc, RJ_On = new_phot
                 self.StarPhotosphere[1] = yphot
 
-    def writeSED(self, filename='sed.txt', comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom,\
-                          Teff={:.1f}K,rad={:.3f}Rsol.\n'):
+    def writeSED(self, filename='sed.txt',
+                 comment='# lambda: Angstroms, f_lambda: erg/s/cm^2/Angstrom, Teff={:.1f}K,rad={:.3f}Rsol.\n'):
         """
         Function to write out fitted SED to file.
 
-        Parameters
-        ----------
-        filename: (str) file of where SED will be saved.
-        comment: (str) comment starting with '#' of any comment to go
-                 on first line of the saved SED file.
+        Args:
+            filename: (str) file of where SED will be saved.
+            comment: (str) comment starting with '#' of any comment to go on
+                first line of the saved SED file.
 
         """
         comment = comment.format(self.StarTemp, self.StarRadius)
@@ -270,11 +258,11 @@ class Star:
             raise ValueError('Photosphere was not created --> cant be written out.')
 
         with open(filename, 'w') as file:
-            file.write('%s' % comment)
+            file.write(f'{comment}')
             file.write('lambda\t f_lambda\n')
             np.savetxt(file, np.transpose(self.StarPhotosphere), delimiter='\t')
 
-        logging.info('SED for %s saved to %s' % (self.starname, filename))
+        logging.info(f'SED for {self.starname} saved to {filename}')
 
     def cleanphotometry(self, specs):
         """
@@ -291,9 +279,8 @@ class Star:
 
         Also it removes optical bands if they're late type stars.
 
-        Parameters
-        ----------
-        specs: (dict) dictionary created using json file.
+        Args:
+            specs: (dict) dictionary created using json parameterfile.
 
         """
 
@@ -311,7 +298,8 @@ class Star:
         if specs['W2Adapt']:
             mags4Phot0 = self.W2Adopt(specs, mags4Phot0, True)
         # Remove optical bands cause of late spectral type?
-        if self.starsdat['NoOptical'][self.sid]:
+        # todo - this piece doesn't work
+        if self.star_dat_i['NoOptical']:
 
             self.bv_unusedDict = {}
 
@@ -321,7 +309,7 @@ class Star:
                     try:
                         # todo: change string formatting from %s
                         ind = np.where(np.array(eval(arr)) == mv)[0]
-                        self.bv_unusedDict[mv] = self.starsdat[mv + 'm'][self.sid]
+                        self.bv_unusedDict[mv] = self.star_dat_i[mv + 'm']
                         exec(f'{arr} = np.delete({arr},ind)')
                     except ValueError:
                         pass
@@ -330,33 +318,33 @@ class Star:
         for mv in mags2use0:
 
             try:
-                temp_mf = self.starsdat['{}m'.format(mv)][self.sid]
+                temp_mf = self.star_dat_i['{}m'.format(mv)]
             except KeyError as e:
                 print(f"Error: The key '{e.args[0]}' was not "
                       f"found in the mags2use0 list.")
-                temp_mf = self.starsdat['{}'.format(mv)][self.sid]
+                temp_mf = self.star_dat_i['{}'.format(mv)]
             # CHECK IF IT'S NULL. REMOVE IF SO FROM ENTIRE LIST.
             if temp_mf == 'null':
                 try:
                     mags2use0.remove(mv)
-                    logging.info('{} band removed from mags2use0'.format(mv))
+                    logging.info(f'{mv} band removed from mags2use0')
                 except ValueError:
-                    logging.error('Error in removing {} from mags2use'.format(mv))
+                    logging.error(f'Error in removing {mv} from mags2use')
                 try:
                     mags4Phot0.remove(mv)
-                    logging.info('{} band removed from mags4Phot0'.format(mv))
+                    logging.info(f'{mv} band removed from mags4Phot0')
                 except ValueError:
-                    logging.error('Error in removing {} from mags4phot'.format(mv))
+                    logging.error(f'Error in removing {mv} from mags4phot')
                 try:
                     mags4scale0.remove(mv)
-                    logging.info('{} band removed from mags4scale0'.format(mv))
+                    logging.info(f'{mv} band removed from mags4scale0')
                 except ValueError:
-                    logging.error('Error in removing {} from mags4scale'.format(mv))
+                    logging.error(f'Error in removing {mv} from mags4scale')
                 try:
                     mags4Dust0.remove(mv)
-                    logging.info('{} band removed from mags4Dust0'.format(mv))
+                    logging.info(f'{mv} band removed from mags4Dust0')
                 except ValueError:
-                    logging.error('Error in removing {} from mags4dust'.format(mv))
+                    logging.error(f'Error in removing {mv} from mags4dust')
 
             # OTHERWISE ADD IT.
             else:
@@ -373,8 +361,7 @@ class Star:
 
                     # WHEN THERE IS A NULL VALUE
                     try:
-                        efj = float(
-                            self.starsdat[f'{mv}_fluxe'][self.sid])
+                        efj = float(self.star_dat_i[f'{mv}_fluxe'])
                     except ValueError:
                         efj = 0.05 * fj
 
@@ -390,10 +377,10 @@ class Star:
                     # Assumes the rest is a magnitude
                 else:
                     vegaMagDict_temp[mv] = temp_mf
-                    if self.starsdat['%sme' % mv][self.sid] == 'null':
+                    if self.star_dat_i[f'{mv}me'] == 'null':
                         vegaMagErrDict_temp[mv] = 0.05 * (vegaMagDict_temp[mv])
                     else:
-                        vegaMagErrDict_temp[mv] = float(self.starsdat['{}me'.format(mv)][self.sid])
+                        vegaMagErrDict_temp[mv] = float(self.star_dat_i[f'{mv}me'])
 
         # CHECK SATURATION LIMITS AND REMOVE FROM ALL LISTS
         # ========================================
@@ -430,8 +417,9 @@ class Star:
         Calculates the excess flux at the passbands listed in mags4Dust
         using the photospheric fit.
 
-        flux and uncertainty for excesses are stored in self.fluxEx and self.efluxEx.
-        Wavelengths are in self.Ex in angstroms.
+        flux and uncertainty for excesses are stored in :attr:`Star.fluxEx` and
+        :attr:`Star.efluxEx`.
+        Wavelengths are in :attr:`Star.WaveEx` in angstroms.
 
         """
 
@@ -517,14 +505,14 @@ class Star:
             plist = pmaglist
 
         if simple:
-            if self.starsdat['W3m'][self.sid] > 3.8:
+            if self.star_dat_i['W3m'] > 3.8:
                 plist = np.append(plist, 'W3')
         else:
             W13_cut = specs['WISE_excess']['W13_cut']
             W23_cut = specs['WISE_excess']['W23_cut']
 
-            w1w3snr = self.starsdat['W1W3SNR'][self.sid]
-            w2w3snr = self.starsdat['W2W3SNR'][self.sid]
+            w1w3snr = self.star_dat_i['W1W3SNR']
+            w2w3snr = self.star_dat_i['W2W3SNR']
 
             try:
                 w3snr1 = float(w1w3snr)
@@ -555,26 +543,22 @@ class Star:
         return plist
 
     def W2Adopt(self, specs, pmaglist=None, simple=True):
-        """Determines whether the WISE W2 photometry
+        r"""Determines whether the WISE W2 photometry
         should be included in the list of  photometric
         points to be used to pin down the photosphere.
         v1 uses the previously determined W1-W2 cuts
         as well as the excess SNRs (Sigma_{E[W1-W2]}) to
         determine whether the photometry is photospheric.
 
-        Parameters
-        ----------
-        Parameters
-        ----------
-        specs: (dict) dictionary created using json file.
-        pmaglist : (list) includes the string list of photometry
-                        used to pin down photosphere.
-        simple : (bool) if simple is set, it uses the saturation limit to
-                 to determine whether W3 should be used.
+        Args:
+            specs (dict):  dictionary created using json file.
+            pmaglist (list): includes the string list of photometry used to pin
+                down photosphere.
+            simple (bool): if simple is set, it uses the saturation limit to
+                determine whether W3 should be used.
 
-        Returns
-        -------
-        plist: (list) new list of photospheric string values
+        Returns:
+            plist (list): new list of photospheric string values
         """
 
         if pmaglist is None:
@@ -583,13 +567,13 @@ class Star:
             plist = pmaglist
 
         if simple:
-            if self.starsdat['W2m'][self.sid] > 3.8:
+            if self.star_dat_i['W2m'] > 3.8:
                 plist = np.unique(np.append(plist, 'W2'))
 
 
         else:
             W12_cut = specs['WISE_excess']['W12_cut']
-            w1w2snr = self.starsdat['W1W2SNR'][self.sid]
+            w1w2snr = self.star_dat_i['W1W2SNR']
             try:
                 w2snr = float(w1w2snr)
             except ValueError:
@@ -601,28 +585,43 @@ class Star:
         return plist
 
     def resetFullSpectrum(self):
+        """
+        Need doc string
+        Returns
+        -------
 
+        """
         self.fullspectrum = self.StarPhotosphere[1][:]
 
         return
 
-    def fitPhotosphere(self, sconst, T0, model, grav, met):
-        """
-        Fit a stellar photosphere model to bands in the list/arr
-        mags4Phot. This uses mpfit in mosaic_tools.py.
+    def fitPhotosphere(self, sconst, T0, model, grav, met, MegaGridModels):
+        r"""
+        Fit a stellar photosphere model to bands in the `mags4Phot` list/array.
+        This uses `mpfit` from `mosaic_tools.py`.
 
-        Results are saved in following internal variables:
-        StarRadius: Stellar radius in Solar Rad. units.
-        StarTemp: Temperature of fitted star in Kelvin.
+        Results are saved in the following internal variables:
+        - **StarRadius**: Stellar radius in Solar Radius units.
+        - **StarTemp**: Temperature of the fitted star in Kelvin.
 
-        Parameters
-        ----------
-        sconst: (float) scaling factor for raw fluxes that equals:
-                [Solar Radius (cm) / 1 parsec (cm)] ** 2 / [star distance (pc)] ** 2
-        T0:     (float) Guess temperature in units of Kelvin/1000
-        model:  (str) name of model to use (either Atlas9 or NextGen)
-        grav:   (float) Surface gravity in units of 10*log(g [cm/s^2])
-        met:    (float) log(metallicity) (0 = solar).
+        Args:
+            sconst (float): Scaling factor for raw fluxes. It equals:
+                (Solar Radius [cm] /  1 pc [cm])^2 * (1/Stellar Distance [pc]^2)
+            T0 (float):
+                Initial guess for the temperature, in units of Kelvin/1000.
+            model (str):
+                Name of the model to use. Options are `"Atlas9"` or `"NextGen"`.
+            grav (float):
+                Surface gravity, expressed as :math:`10\log(g)\ [\mbox{cm}/s^2]`.
+            met (float):
+                Logarithmic metallicity. A value of `0` represents solar metallicity.
+            MegaGridModels (dict): all atmospheric grid models with metallicity,
+                grav, and temperature keys.
+        Returns:
+            None:
+                This function does not return a value but updates internal variables:
+                - **StarRadius**: Stellar radius in Solar Radius units.
+                - **StarTemp**: Temperature of the fitted star in Kelvin.
 
         """
 
@@ -638,7 +637,8 @@ class Star:
 
         fit_dat = STools.fit_photosphere(self.wave, rawfluxdat,
                                          [T0], sconst, modeltype,
-                                         mfitlist, STools.calc_grids)
+                                         mfitlist, STools.calc_grids,
+                                         MegaGridModels)
 
         self.StarRadius, self.StarTemp = fit_dat[0], fit_dat[1]
         self.mfit = fit_dat[2]

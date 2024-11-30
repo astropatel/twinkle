@@ -57,8 +57,8 @@ This section contains the names of relevant directories and files for running th
 
 **Empirical File Names**:
 
-- ``starfile``: Filename for stellar data (`sample_stardata.txt`).
-- ``input_stars``: Filename for input stars (`select_stars.txt`).
+- ``input_user_starfile``: Filename for stellar input data (`sample_stardata.xlsx`).
+- ``input_stars_sheet``: Excel sheet to use in the ``input_user_starfile``.
 - ``bv_colorfile``: Empirical color file (`EMamajek_MSColors.txt`).
 
 The names of all the parameters so far can be changed to whatever your heart desires.

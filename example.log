@@ -1,0 +1,5 @@
+DEBUG:matplotlib.pyplot:Loaded backend module://matplotlib_inline.backend_inline version unknown.
+DEBUG:matplotlib.pyplot:Loaded backend module://matplotlib_inline.backend_inline version unknown.
+INFO:root:JSON parameterfile used:, /Users/darthpatel/Dropbox/Research/twinkle-master/paramfile.json
+INFO:root:WORKING STAR:Star1
+INFO:root:Photosphere for Star1 fit with T=8878.39280982369 K
