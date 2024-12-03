@@ -23,7 +23,7 @@ copyright = '2024, Rahul I. Patel'
 author = 'Rahul I. Patel'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '1.1.0'
 
 
 # -- General configuration ---------------------------------------------------

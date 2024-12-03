@@ -182,8 +182,8 @@ class Star:
 
         if specs['fitphot']:
             self.fitPhotosphere(self.su2ea, self.T0,
-                                self.modeli, self.g, self.met,
-                                self.MegaGrid)
+                                self.modeli, self.g,
+                                self.met, self.MegaGrid)
 
             params, perror = self.mfit.params, self.mfit.perror
             self.p_up, self.p_down = params + perror, params - perror
@@ -196,7 +196,7 @@ class Star:
             gridpts = specs['spec_sample']['gridpts']
             modelinfo = (self.modeli, self.g, self.met)
             self.StarPhotosphere = STools.photosphere([self.StarTemp / 1000.,
-                                                       self.StarRadius],
+                                                      self.StarRadius],
                                                       self.su2ea, modelinfo,
                                                       self.MegaGrid,
                                                       wave=(wave_min, wave_max),
@@ -272,15 +272,16 @@ class Star:
         star.
 
         arrays created:
-        1) mags2use = all the bands that are used.
-        2) mags4Phot = bands that are used to fit to model photosphere.
-        3) mags4scale = bands used to scale raw model to input flux.
-        4) mags4Dust = band used to calculate excess.
+
+        * :attr:`Star.mags2use` - all the bands that are used.
+        * :attr:`Star.mags4Phot` - bands that are used to fit to model photosphere.
+        * :attr:`Star.mags4scale` - bands used to scale raw model to input flux.
+        * :attr:`Star.mags4Dust` - band used to calculate excess.
 
         Also it removes optical bands if they're late type stars.
 
         Args:
-            specs: (dict) dictionary created using json parameterfile.
+            specs (dict): dictionary created using json parameterfile.
 
         """
 
@@ -419,6 +420,7 @@ class Star:
 
         flux and uncertainty for excesses are stored in :attr:`Star.fluxEx` and
         :attr:`Star.efluxEx`.
+
         Wavelengths are in :attr:`Star.WaveEx` in angstroms.
 
         """
@@ -431,8 +433,8 @@ class Star:
         # CALCULATE EXCESS FLUX AND ADD TO TAUA
         for band in self.mags4Dust:
             exflux = self.flux[band + '_flux'] - self.photFlux[band]
-            print((band, ' excess flux ', exflux, 'erg/s/cm2/ang'))
-            self.excessFlux[band + '_flux'] = exflux
+            print((f'{band} excess flux ', exflux, 'erg/s/cm2/ang'))
+            self.excessFlux[f'{band}_flux'] = exflux
             self.excessFlux_wave[band] = self.wave[band]
             self.excessFlux_e[band + '_flux'] = self.fluxerr[band + '_flux']
 
@@ -444,17 +446,19 @@ class Star:
     def keep_unsatmags(self, vegaDict, magsCheck):
         """
         This will remove any saturated photometry from the
-        string lists (mags2use,mags4scale,mags4Phot,mags4Dust).
+        photometry string lists:
 
-        Parameters
-        ----------
-        vegaDict: (dict) Photometry of bands for a particular star.
-        magsCheck: (list/arr) subset of bands to check.
+        * :attr:`Star.mags2use` - all the bands that are used.
+        * :attr:`Star.mags4Phot` - bands that are used to fit to model photosphere.
+        * :attr:`Star.mags4scale` - bands used to scale raw model to input flux.
+        * :attr:`Star.mags4Dust` - band used to calculate excess.
 
-        Returns
-        -------
-        magsCheck1: (list/arr) subset of magsCheck that don't have
-                    saturated photometry.
+        Args:
+            vegaDict (dict): Photometry of bands for a particular star.
+            magsCheck (list/arr):subset of bands to check.
+
+        Returns:
+            magsCheck1: (list/arr) subset of magsCheck that don't have saturated photometry.
         """
 
         magsCheck1 = magsCheck
@@ -483,20 +487,18 @@ class Star:
         v1 uses the previously determined W1-W3 and W2-W3 cuts
         as well as the excess SNRs (Sigma_{E[Wi-W3]}) to
         determine whether the photometry is photospheric for
-        a given star....
+        a given star. This is from Patel et al., 2014.
         Or whether the photometry is saturated or not.
 
-        Parameters
-        ----------
-        specs: (dict) dictionary created using json file.
-        pmaglist : (list) includes the string list of photometry
-                        used to pin down photosphere.
-        simple : (bool) if simple is set, it uses the saturation limit to
-                 to determine whether W3 should be used.
+        Args:
+            specs (dict): dictionary created using json file.
+            pmaglist (list): includes the string list of photometry used to
+                pin down photosphere.
+            simple (bool): if simple is set, it uses the saturation limit to
+                determine whether W3 should be used.
 
-        Returns
-        -------
-        plist: (list) new list of photospheric string values
+        Returns:
+            plist (list): new list of photospheric string values
         """
 
         if pmaglist is None:
@@ -549,6 +551,7 @@ class Star:
         v1 uses the previously determined W1-W2 cuts
         as well as the excess SNRs (Sigma_{E[W1-W2]}) to
         determine whether the photometry is photospheric.
+        This is from Patel et al., 2014
 
         Args:
             specs (dict):  dictionary created using json file.
@@ -586,23 +589,20 @@ class Star:
 
     def resetFullSpectrum(self):
         """
-        Need doc string
-        Returns
-        -------
+        Resets the spectrum to original photospheric guess emission... I think.
 
         """
         self.fullspectrum = self.StarPhotosphere[1][:]
 
-        return
 
     def fitPhotosphere(self, sconst, T0, model, grav, met, MegaGridModels):
         r"""
-        Fit a stellar photosphere model to bands in the `mags4Phot` list/array.
-        This uses `mpfit` from `mosaic_tools.py`.
+        Fit a stellar photosphere model to bands in the :attr:`Star.mags4Phot` list/array.
+        This uses :meth:`twinkle.utils.mosaic_tools.mpfit` Levenberg-Marquadt algorithm
 
         Results are saved in the following internal variables:
-        - **StarRadius**: Stellar radius in Solar Radius units.
-        - **StarTemp**: Temperature of the fitted star in Kelvin.
+        - :attr:`Star.StarRadius`: Stellar radius in Solar Radius units.
+        - :attr:`Star.StarTemp`: Temperature of the fitted star in Kelvin.
 
         Args:
             sconst (float): Scaling factor for raw fluxes. It equals:
@@ -617,12 +617,6 @@ class Star:
                 Logarithmic metallicity. A value of `0` represents solar metallicity.
             MegaGridModels (dict): all atmospheric grid models with metallicity,
                 grav, and temperature keys.
-        Returns:
-            None:
-                This function does not return a value but updates internal variables:
-                - **StarRadius**: Stellar radius in Solar Radius units.
-                - **StarTemp**: Temperature of the fitted star in Kelvin.
-
         """
 
         modeltype = (model, grav, met)
@@ -645,17 +639,15 @@ class Star:
 
     def plot_photrange(self, ax, color='orange', **kwargs):
         """
-        Plot photosphere limits based on uncertainties in fit parameters
-        Parameters
+        Plot photosphere limits based on uncertainties in fit parameters.
 
-        Parameters
-        ----------
-        ax : matplotlib axis object
-        color: matplotlib color identifier.
-        kwargs : additional matplotlib kwargs.
-
+        Args:
+            ax (obj): matplotlib axis object
+            color (str): matplotlib color identifier.
+            kwargs (dict): additional matplotlib kwargs.
 
         """
+
         xlam = self.StarPhotosphere_down[0]
         ax.fill_between(xlam * _ANG2MICRON,
                         self.StarPhotosphere_down[1] * xlam,
@@ -665,19 +657,17 @@ class Star:
     def plot_photosphere(self, ax, pointsize=4, lcolor='orange', pcolor='orange',
                          marker='o', linestyle='--', lw=2, **kwargs):
 
-        """
+        r"""
         Plot photospheric data.
 
-        Parameters
-        ----------
-        ax : axis object (e.g. ax = plt.figure().add_subplot(111))
-        pointsize (float) : marker size
-        color (string) : marker color
-        marker (string) : marker type
-        linestyle (string) : linesytle
-        lw (float): linewidth
-        kwargs: matplotlib kw
-
+        Args:
+            ax (obj): matplotlib axis object
+            pointsize (float) : marker size
+            color (string) : marker color
+            marker (string) : marker type
+            linestyle (string) : linesytle
+            lw (float): linewidth
+            kwargs (dict): additional matplotlib keyworded arguments
         """
         xlam, yflux = self.StarPhotosphere
 
@@ -701,17 +691,16 @@ class Star:
         """
         Plot empirical SED data.
 
-        Parameters
-        ----------
-        ax : axis object (e.g. ax = plt.figure().add_subplot(111))
-        pointsize (float): marker size
-        lcolor (string) : line color
-        pcolor (string) : point color
-        markerp (string) : marker type
-        markernp (string) :
-        capsize
-        linestyle (string): linestyle
-        lw (float): linewidth
+        Args:
+            ax (obj): matplotlib axis object
+            pointsize (float): marker size
+            lcolor (str): line color
+            pcolor (str): point color
+            markerp (str): marker type
+            markernp (str): don't remember what this does
+            capsize (float):
+            linestyle (string): linestyle
+            lw (float): linewidth
         """
 
         xlam, ylam = self.StarPhotosphere
@@ -722,11 +711,11 @@ class Star:
                 ls=linestyle, lw=lw, **kwargs)
 
         for i, (band, lam) in enumerate(list(self.wave.items())):
-            flx = self.flux[band + '_flux']
-            flxerr = self.fluxerr[band + '_flux']
+            flx = self.flux[f'{band}_flux']
+            flxerr = self.fluxerr[f'{band}_flux']
 
             if np.any(band == np.array(self.mags4Phot)):
-                pfmt = '%s%s' % (pcolor, markerp)
+                pfmt = f'{pcolor}{markerp}'
             else:
                 pfmt = '%s%s' % (pcolor, markernp)
             if i == 0:

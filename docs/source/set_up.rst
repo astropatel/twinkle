@@ -280,7 +280,7 @@ Sure. You could ask that.
         │   ├── <span style="color: blue;">EMamajek_MSColors.txt</span>
         │   ├── <span style="color: lightcoral;">StellarInputFiles/</span>
         │   │   ├── Input_StarFile_Description.xlsx
-        │   │   └── <span style="color: blue;">sample_stardata.txt</span>
+        │   │   └── <span style="color: blue;">user_input_stardata.xlsx</span>
         │   ├── <span style="color: lightcoral;">StellarGridModels/</span>
         │   │   ├── <span style="color: lightcoral;">ATLAS9/</span>
         │   │   │   ├── README.txt
@@ -369,12 +369,15 @@ The file used by `Twinkle` can be found `on the github page <https://github.com/
 
 .. warning:: Dr. Eric Mamajek's tables are constantly being updated, and the table used by the simulation may be outdated. Take this into consideration when using the table on Github.
 
-['files']['starfile'] | (e.g., sample_stardata.txt, sample_stardata_simple.txt)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+['files']['starfile'] | (e.g., user_input_stardata.xlsx)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This file contains tabular tsv data for each star whose SED you wish to model. Each row contains meta-data and empirical photometric information for a single star, and the columns correspond to different meta-data information. Information on how to build the starfile can be found on the :doc:`User Input File page<input_data>`.
+This file is an excel file containing data for each star whose SED you wish to model. Each row contains physical and photometric information for a single star, and the columns correspond to different features for the star. Information on how to build the starfile can be found on the :doc:`User Input File page<input_data>`.
 
-.. note:: future version of the user input file will be an Excel workbook.
+['files']['input_stars_sheet']
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Your excel file can have multiple sheets, and you can specify which sheet to use from this parameter.
 
 Input_StarFile_Description.xlsx
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

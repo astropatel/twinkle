@@ -1,22 +1,21 @@
 User Input File
 *******************
 
-.. note:: A future iteration of the user input file will change to an excel file to make it easier. It is currently a text file.
-
-
 The stellar input file contains all the metadata required for each star whose spectral energy distribution (SED) you wish to model. In the `JSON parameterfile <https://github.com/astropatel/twinkle/blob/master/paramfile.json>`_ (see the :doc:`Set-Up page<set_up>`) the file path is described as
 
 .. code-block:: rst
 
-    ``['folders']['topdir']``/``['folders']['supportdir']``/StellarInputFiles
+    ['folders']['topdir']/['folders']['supportdir']/StellarInputFiles/user_input_stardata.xlsx
 
 where, in the parameter file, and in the project repo example, it's
 
 ::
 
-    twinkle-master/Inputs_and_Models/StellarInputFiles/sample_stardata_simple.txt.
+    twinkle-master/Inputs_and_Models/StellarInputFiles/user_input_stardata.xlsx.
 
-The input file is a tab separated value (tsv) file, with a header where each column corresponds to a different meta-data parameter for each star. Each subsequent line contains information for a different star.
+The input file is an excel file, with a header where each column corresponds to a different meta-data parameter for each star. Each subsequent line contains information for a different star.
+
+You can have multiple sheets in your excel file -- maybe you want to have different versions of the same input data. You can specify which sheet you want to use through the ``['files']['input_stars_sheet']`` parameter in the JSON parameterfile.
 
 Below is a simple stellar input file (broken up for easier viewing, but it would be a 3 row by 20 column file) that includes optical photometric data and some mid-infrared `WISE data <https://www.jpl.nasa.gov/missions/wide-field-infrared-survey-explorer-wise/>`_. You can download the contents of this input file and others `here <https://github.com/astropatel/twinkle/tree/master/Inputs_and_Models/StellarInputFiles>`_.
 

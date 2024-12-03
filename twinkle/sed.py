@@ -18,11 +18,8 @@ from .utils import mosaic_tools as mt
 import scipy.interpolate as intp
 import scipy.integrate as sintp
 
-from astropy.io import ascii
 from astropy.io import fits
 from astropy import constants as con
-
-# import astropy.units as u
 
 __author__ = 'Rahul I. Patel <ri.patel272@gmail.com>, Joe Trollo'
 
@@ -54,16 +51,12 @@ class SEDTools:
 
     def __init__(self):
 
-        # intpdir = os.path.join(os.getcwd(), 'Interpolation_Files')
-        # fRSR = os.path.join(intpdir, 'RSR')
         self.create_passbands()
 
     def create_passbands(self, RSRFile=None, flat=False, waverange=(None, None),
                          cntr=None):
         r"""
-         Returns passband objects (no input) for all bands in WISE, 2MASS, and
-         Johnson UBVRI. All passband info need to be in '.../Interpolation_Files/RSR/
-         directory.
+         Returns passband objects (no input) for all bands in this function.
 
          You can serparately enter the RSRFile name along with wavelength units
          to create your own passband object. Above rules apply.
@@ -174,19 +167,19 @@ class SEDTools:
 
     def cgs2Jy(self, flux, dflux, band=None, wave=None, nu=None):
         r"""
-        To convert specific flux from erg/s/cm2/Ang to Jy. It assumes
-        input wavelength is in Angstroms
+        To convert specific flux from :math:`\mbox{erg}/\mbox{cm}^2/s/A` to Jy.
+         It assumes input wavelength is in Angstroms
 
         Args:
-            nu (array): frequency in Hz to convert to Jansky.
-            wave (array): wavelength in Angstroms
-            flux (array): flux in erg/s/cm2/Ang
-            band (passband obj):
+            nu (arr): frequency in Hz to convert to Jansky.
+            wave (arr): wavelength in Angstroms
+            flux (arr): flux in :math:`\mbox{erg}/\mbox{cm}^2/s/A`
+            band (passband obj): any of the :attr:`SEDTools.[band_id]pband`
             wave (float): wavelength in angstroms(???)
             nu (float): frequency in ...(??)
 
         Returns:
-            flux density in Janskies.
+            (tuple): flux density in Janskies.
         """
         _CS = con.c.to('angstrom/s').value
 
@@ -207,7 +200,6 @@ class SEDTools:
         else:
             nu = _CS / wave
 
-        # y = flux*(wave**2/(_CS))*1e23
         y = (Flux / nu) * 1e23
         # DOES NOT INCLUDE UNCERTAINITY IN FREQUENCY OR WAVELENGTH
         dy = (1e23 / nu) * dflux * wave  # + (flux * dwave)**2)
@@ -219,12 +211,12 @@ class SEDTools:
         Convert magnitudes to Janskies
 
         Args:
-            band (str): any of the band designations in "create_passbands"
+            band (str): any of the band designations in :meth:`SEDTools.create_passbands`
             mag (float): photometric measurement in vega mags
             magerr (float): associated mag uncertainty
 
         Returns:
-            fjy, efjy : (float, float) flux and uncertainty in Jansky.
+            tuple - (arr, arr): flux and uncertainty in Jansky.
 
         """
 
@@ -236,18 +228,17 @@ class SEDTools:
         return fjy, efjy
 
     def Jy2cgs(self, fluxNu, freq, lam=None):
-        r""" To convert specific flux in Jansky to erg/s/cm2.
+        r""" To convert flux in Jansky to :math:`\mbox{erg}/\mbox{cm}^2/s/A`
         It assumes the wavelength is in Angstroms.
 
         Args:
             fluxNu (tuple(float/array,float/array)): flux and uncertainty in Jansky
             freq (tuple(float,float)): frequency and uncertainty in freq in Hz
             lam (tuple(float,float), optional): Wavelength in angstroms and
-                corresponding uncertainty. If freq is None, then this will be used
-                to calculate a frequency.
+                corresponding uncertainty. If freq is None, then this will be
+                used to calculate a frequency.
         Returns:
-            A tuple with the flux and conversion error (Flux, dFlux) in erg/s/cm2.
-            If no errors are given, dFlux = None
+            (tuple): A tuple with the flux and conversion error (Flux, dFlux) in :math:`\mbox{erg}/\mbox{cm}^2/s/A`.
         """
 
         flux_nu, eflux_nu = fluxNu
@@ -281,12 +272,12 @@ class SEDTools:
             mag_list (list): list of strings with keys corresponding to band
                 from which to extract wavelength.
                 If mag_list = ['mv1','mv2',...,'mvN'], then
-                wave[i] = self.mv1pband.isoWavelength(). Check to see which
+                wave[i] = :attr:`Star.[mv1]pband.isoWavelength()`. Check to see which
                 RSR bands are available.
 
         Returns:
-            waveDict (dict): dictionary of keys:val such that keys=mvi & val are
-                the iso/pivot wavelengths (Angstroms).
+            (dict): dictionary of keys:val such that keys=mvi & val are
+            the iso/pivot wavelengths (Angstroms).
          """
 
         waveDict = {}
@@ -298,24 +289,32 @@ class SEDTools:
 
     def vega2AB(self, band, m_vega):
         r"""
-        todo - This module needs to be updated.
         Module to convert photometric magnitudes into AB mag system.
         AB magnitude is defined such that the monochromatic flux is
-        measured in erg/s/cm^2/Hz,
-        I.e., AB = -2.5 log(f_cgs) - 48.6 ,
-        such that for any bandpass or filter, the zero point mag
-        corresponds to a flux density of 3631 Jy.
+        measured in :math:`\mbox{erg}/\mbox{cm}^2/s/Hz`.
+        i.e., :math:`\mbox{AB} = -2.5 \log(f_{cgs}) - 48.6` ,
+        such that for any filter, the zero point mag corresponds to a flux
+        density of 3631 Jy.
+
+        .. note::
+
+            2MASS:
+            TAKEN FROM ODENWALD ET AL. 2003
+            Analysis of the Diffuse Near-Infrared Emission from 2MASS Deep
+            Integration Data:
+            Foregrounds versus the Cosmic Infrared Background
+
+            WISE: http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/
+
 
         Args:
             band (str): Which pass band.
             m_vega (float/array): Vega magnitudes
 
         Returns:
-            AB converted magntidues as same format as input `m_vega`
+            AB converted magntidues as same format as input ``m_vega``
          """
-        # TAKEN FROM ODENWALD ET AL. 2003
-        # Analysis of the Diffuse Near-Infrared Emission from 2MASS Deep Integration Data:
-        # Foregrounds versus the Cosmic Infrared Background
+
 
         if band == 'J2M':
             mab = m_vega + 0.894
@@ -323,8 +322,6 @@ class SEDTools:
             mab = m_vega + 1.37
         elif band == 'Ks2M':
             mab = m_vega + 1.84
-        # TAKEN FROM WISE FAQ
-        # http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/
 
         elif band == 'W1':
             mab = m_vega + 2.699
@@ -368,8 +365,8 @@ class SEDTools:
             vegaMag,+Err (dict): Vega magnitudes in mag_list
 
          Returns:
-             Dictionaries of converted AB mag and associated errors with keys
-             used from input mag_list suffixed by '_AB' or '_ABerr'
+             (dict, dict): Dictionaries of converted AB mag and associated
+             errors with keys used from input mag_list suffixed by '_AB' or '_ABerr'
          """
         mag2use = mag_list
         vegaMagDict, vegaMagErrDict = vegaMag, vegaMagErr
@@ -393,8 +390,20 @@ class SEDTools:
 
     def mag2fluxAB(self, band, abmags, abmagserr):
         r"""
-        Does the same thing as batch_mag2flux except only takes one band
-        and can be applied to multiple measurements in the same band to produce a flux
+        Does the same thing as :meth:`SEDTools.batch_mag2flux` except only takes
+        one band and can be applied to multiple measurements in the same band to
+        produce a flux
+
+        Args:
+            band (obj): strings with magnitude names (ex: ['mv1','mv2',...,'mvn'])
+            abmags/abmagserr (dict): dictionary of magnitude/error in AB mag format
+                with keys 'mvi_AB' or 'mvi_ABerr' for errors
+
+        Returns:
+            (dict, dict): dictionaries of converted AB mag to fluxes and separate dict for
+            flux errors :math:`\mbox{erg}/\mbox{cm}^2/s/A`.; keys: ``mvi_flux``
+
+
         """
 
         fluxJy = (10 ** 23.0) * 10 ** (
@@ -421,8 +430,9 @@ class SEDTools:
             abmags/abmagserr (dict): dictionary of magnitude/error in AB mag format
                             with keys 'mvi_AB' or 'mvi_ABerr' for errors
         Returns:
-            dictionaries of converted AB mag to fluxes and separate dic for
-            flux errors (erg s-1 cm-2 A-1); keys: 'mvi_flux'
+            (dict): dictionaries of converted AB mag to fluxes and separate
+                dict for flux errors :math:`\mbox{erg}/\mbox{cm}^2/s/Hz`.;
+                keys: 'mvi_flux'
        """
         band2use = band_list
         fluxDict, fluxDict_err = {}, {}
@@ -439,13 +449,14 @@ class SEDTools:
 
     def fluxZPLam2mag(self, band, flux, fluxErr):
         r"""
-        Convert input flux which should be in units of ergs/cm^2/s/Angstrom to
-        vega magnitudes using the zero point fluxes for each bandpass listed in
-        the RSR file and hence the passband object
+        Convert input flux which should be in units of
+        :math:`\mbox{erg}/\mbox{cm}^2/s/A` to vega magnitudes using the zero
+        point fluxes for each bandpass listed in the RSR file and hence the
+        passband object
 
         Args:
             band (obj): passband object
-            flux (float): Flux density in ergs/cm^2/s/Angstrom
+            flux (float): Flux density in :math:`\mbox{erg}/\mbox{cm}^2/s/A`
             fluxErr (float): error assosciated wiht the input flux
         
         Returns:
@@ -460,21 +471,23 @@ class SEDTools:
 
     def mag2fluxZPLam(self, band, Vmag, VmagErr, sysErr=False):
         r"""
-        Converts the input vega magnitude to specific flux in ergs/cm^2/s/Angstrom using the
-        zero point fluxes obtained from the passband file from literature.
+        Converts the input vega magnitude to specific flux in
+        :math:`\mbox{erg}/\mbox{cm}^2/s/A` using the zero point fluxes obtained
+        from the passband file from literature.
 
         Args:
-            band: passband object
+            band (obj): passband object
             Vmag (float): Vega magnitude
             VmagErr (float):  error associated with Vega Magnitude)
             sysErr: (bool) Includes the given bandpasses photospheric
                 calibration systematic uncertainty found in the RSR text file.
                 Set to True if this error needs to be added in quadrature to the
                 total integrated flux uncertainty.
-                Default is False
+                Default is `False`
 
         Returns:
-            flux, fluxerr in ergs cm^-2 s^-1 A^-1"""
+            flux, fluxerr in :math:`\mbox{erg}/\mbox{cm}^2/s/A`
+        """
 
         Fiso, dFiso = band.fluxVegaZeroPointLam()
         Flux_lam = Fiso * (10 ** (Vmag / -2.5))
@@ -491,12 +504,13 @@ class SEDTools:
 
     def mag2fluxZPNu(self, band, Vmag, VmagErr, sysErr=False):
         r"""
-        Converts the input vega magnitude to specific flux in ergs/cm^2/s/Hz using the
-        zero point fluxes obtained from the passband file from literature. For this module,
+        Converts the input vega magnitude to specific flux in
+        :math:`\mbox{erg}/\mbox{cm}^2/s/Hz` using the zero point fluxes
+        obtained from the passband file from literature. For this module,
         the zero point fluxes in frequency need to be there otherwise this won't work.
 
         Args:
-            band: passband object
+            band (obj): passband object
             Vmag (float): Vega magnitude
             VmagErr (float):  error associated with Vega Magnitude)
             sysErr (bool):  Includes the given bandpasses photospheric
@@ -506,7 +520,7 @@ class SEDTools:
                 Default is False
 
         Returns:
-            list of flux,fluxerr in ergs cm^-2 s^-1 Hz^-1
+            list: flux, and flux uncertainties in :math:`\mbox{erg}/\mbox{cm}^2/s/Hz`
         """
 
         Fiso, dFiso = band.fluxVegaZeroPointFreq()
@@ -534,8 +548,7 @@ class SEDTools:
                 'mvi' for both mag and errors.
 
         Returns:
-            dictionaries of converted Vega magnitude to fluxes and associated
-            errors in units of ergs/s/cm^2/Angstrom.
+            (dict, dict): dictionaries of converted Vega magnitude to fluxes and associated errors in units of :math:`\mbox{erg}/\mbox{cm}^2/s/A`.
         """
 
         band2use = band_list
@@ -565,12 +578,12 @@ class SEDTools:
             flux (arr): Fluxes of main fit
             flux_up (arr): Fluxes of upper limit of fit.
             flux_down (arr): Fluxes of lower limit of fit.
-            report_type (str): either 'avg' to report average of uncertainties or'both'
+            report_type (str): either ``avg`` to report average of uncertainties or ``both``
 
         Returns:
-            flux at the particular band and uncertainties. If 'avg', returns
+            flux at the particular band and uncertainties. If ``avg``, returns
             2 element array (flux, eflux).
-            If 'both', returns 3 element array (flux, eflux_low, eflux_high)
+            If ``both``, returns 3 element array (flux, eflux_low, eflux_high)
         """
 
         flux = self.rsr_flux(pband, lambda_, flux)[0]
@@ -584,27 +597,27 @@ class SEDTools:
         elif report_type == 'both':
             return flux, fl, fu
         else:
-            raise Exception(
-                'No report_type specified. If you only want integrated flux, use rsr_flux')
+            raise Exception('No report_type specified. If you only want '
+                            'integrated flux, use rsr_flux')
 
     def rsr_flux(self, pband, lambda_, flux):
         r"""
         Calculates integreated flux filtered through a passband object
+
+        .. math::
+
+            F_{full} = \frac{\int F_\lambda\ \mbox{RSR}_\lambda\ \lambda\ \delta\lambda}{\int \mbox{RSR}_\lambda\ \lambda\ \delta\lambda}
 
         Args:
             pband (obj): passband object for a given photometric band created
                 from Bandpass class
             \lambda_ (arr): Wavelengths in Angstroms range of flux to
                 be calculated. Range should be atleast the extent of pband
-            flux (arr): Fluxes mapped to \lambda_ in erg s^-1 cm^-2?
+            flux (arr): Fluxes mapped to \lambda_ in :math:`\mbox{erg}/\mbox{cm}^2/s`?
 
         Returns:
             Integrated flux over the specified bandpass as float or array.
             Integration is done using Simpson's rule for integration such that:
-
-            .. math::
-
-                F_{full} = \frac{\int F_\lambda\ \mbox{RSR}_\lambda\ \lambda\ \delta\lambda}{\int \mbox{RSR}_\lambda\ \lambda\ \delta\lambda}
 
         """
 
@@ -680,6 +693,18 @@ class SEDTools:
         return Sn_arr
 
     def indSandwhich(self, t0, arr):
+        """
+        Gives the indices of the array (``arr``) surrounding the
+        target temperature ``t0`` to within 3 grid spaces for effective interpolation.
+        I mean, this can be used for any array -- not just SED stuff.
+
+        Args:
+            t0 (float): Target temperature in Kelvin
+            arr (arr): array that contains the target temperature.
+
+        Returns: +/- 3 indexes to the left and right of the target value.
+
+        """
         ind = np.searchsorted(arr, t0)
         indRight = ind + 3
         indLeft = ind - 3
@@ -699,17 +724,19 @@ class SEDTools:
         Args:
             \lambda_ (arr/float): wavelength values where flux will be calculated
             T0 (float): Temperature in Kelvins to determine best grid flux
-            su2ea1 (float): factor that includes the distance^2 to convert from
-                surface to earth flux: (1/radius)^2 x (radius^2/dist^2)
-            griddata (tuple): (lam_arr,flux_arr) created from `get_grids`
+            su2ea1 (float): factor that includes the :math:`\mbox{distance}^2`
+                to convert from surface to earth flux: :math:`1/\mbox{radius}^2 \times (\mbox{radius}/\mbox{dist})^2
+            griddata (tuple): wavelength and flux arr in a 2-element tuple
+                created from :meth:`DataLogistics.get_[model]Grids`, where
+                `model` is either ATLAS9 or NextGen.
             tempArr (arr): Array of increasing temperature values mapped to
-                those found in griddata
+                those found in ``griddata``.
             mag2use (arr): Array of strings with names of photometric magnitude
-                bands where fluxes are calculated. Needed to call passband object.
+                bands where fluxes are calculated. Required to call passband object.
 
         Returns:
             Array of fluxes calculated at argument wavelengths in units of
-            :math:`\frac{\mbox{ergs}}{{cm}^2 s A}`
+            :math:`\mbox{erg}/\mbox{cm}^2/s/A`
         """
         temp0 = p0[0]
         try:
@@ -721,7 +748,6 @@ class SEDTools:
         except:
             resample = resample
 
-        mags2use = mag2use
         grids, TempsArr = griddata, tempArr
         indLeft, indRight = self.indSandwhich(temp0, TempsArr)
 
@@ -736,8 +762,8 @@ class SEDTools:
             fnew_all_temp = np.array(
                 [])  # WILL BE USED TO STORE CALCULATED FLUXES
 
-            lam_arr_all, flux_arr_all = np.log10(lam_arr_all), np.log10(
-                flux_arr_all)
+            (lam_arr_all,
+             flux_arr_all) = (np.log10(lam_arr_all), np.log10(flux_arr_all))
             lambda_ = np.log10(lambda_)
             # GATHER NEW FLUXES FOR EACH TEMPERATURE AT GIVEN g and met
             for i in range(len(lam_arr_all)):
@@ -760,8 +786,8 @@ class SEDTools:
                 m = 10 ** intpObj(temp0)
                 GFluxArr = np.append(GFluxArr, m)
         else:
-            for band in mags2use:
-                pband = eval('self.' + band + 'pband')
+            for band in mag2use:
+                pband = eval(f'self.{band}pband')
 
                 if pband.isoWavelength() > 110000 and resample:
                     (lam_arr_all,
@@ -785,82 +811,90 @@ class SEDTools:
 
     def wienTEMP(self, lambda_, units='micron'):
         r"""
-         To calculate maximum temperature of a blackbody at a given
+         Calculates the maximum temperature of a blackbody at a given
          wavelength using Wien's law.
 
-        To calculate the blackbody irradiance in units of cgs
-        Flux (erg s-1 cm-2 A-1). This module assumes projected
-        emission from a source, so solid angle = pi. All physical
-        constants are in units to facilitate this. Wavelength must
-        be in units of angstrom, microns, cm, or meters. They will
-        be converted to cm to carry out the calculation.
-        units: string indicating units of input wavelength
-        will be converted to cm.
-
+        To calculate the blackbody irradiance in units of cgs Flux
+        :math:`\mbox{erg}/\mbox{cm}^2/s/A`. This module assumes projected
+        emission from a source, so solid angle = pi. All physical constants are
+        in units to facilitate this. Wavelength must be in units of ``angstrom``,
+        ``microns``, ``cm``, or ``meters``. They will  be converted to cm to
+        carry out the calculation.
 
         Args:
-            \lambda_ (float/arr): reference wavelength(s) to calculate blackbody temperature
-        units (str): describes reference wavelength unit. All values in \lambda_
-            have to be the same. Allowed units are 'angstrom','microns','cm',
-            'meters'. Units will be converted to cm for ease of calculation.
+            \lambda_ (float/arr): reference wavelength(s) to calculate blackbody
+                temperature.
+            units (str): describes reference wavelength unit. All values in
+                \lambda_ have to be the same. Allowed units are ``angstrom``,
+                ``microns``, ``cm``, ``meters``. Units will be converted to cm
+                for ease of calculation.
 
         Returns:
-            Temp (float/arr): Temperature in Kelvin.
+            (float): Temperature in Kelvin.
         """
+
         # CHECK UNITS
-        x = lambda_
-        if units == 'angstrom':
-            x *= 1e-8
-        elif units == 'microns':
-            x *= 1e-4
-        elif units == 'meters':
-            x *= 1e-2
-        elif units == 'cm':
-            x = x
-        else:
-            raise ValueError('Unit was not recognized')
-        Temp = _WIEN / x
-        return Temp
+        x = self.scale_wavelength(lambda_, units)
+
+        return _WIEN / x
+
+    def scale_wavelength(self, lambda_, units='micron'):
+        """
+        Rescales the wavelength \lambda_ to cm
+
+        Args:
+            \lambda_ (float/arr): wavelength value(s)
+            units (str): units of input \lambda_
+
+        Returns:
+            wavelength in centimeters.
+        """
+        units_scale_dict = {'angstrom': 1e-8, 'microns': 1e-4,
+                            'meters': 1e-2, 'cm': 1}
+
+        scale = units_scale_dict.get(units, None)
+
+        try:
+            lambda_ *= scale
+            return lambda_
+
+        except TypeError:
+            print(f'Unit {units} was not recognized')
 
     def blackbody(self, lambda_, p0, su2ea1=1, bands=None,
                   units='angstrom', bulk=False, **kwargs):
         r"""
         To calculate the blackbody irradiance in units of cgs
-        Flux (erg s-1 cm-2 A-1). This module assumes projected
-        emission from a source, so solid angle = pi. All physical
-        constants are in units to facilitate this. Wavelength must
-        be in units of angstrom, microns, cm, or meters. They will
-        be converted to cm to carry out the calculation.
+        Flux :math:`\mbox{erg}/\mbox{cm}^2/s/A`. This module assumes projected
+        emission from a source, so solid angle = pi. All physical constants are
+        in units to facilitate this. Wavelength must be in units of angstrom,
+        microns, cm, or meters. They will be converted to cm to carry out the
+         calculation.
 
         Args:
             \lambda_ (arr): wavelengths
-            p0 (arr/list): [Td, Rd]
-                Td - dust temperature in Kelvin
-                Rd - dust radius in AU
+            p0 (arr/list): Td, Rd
+
+                * Td - dust temperature in Kelvin
+                * Rd - dust radius in AU
+
             su2ea1: Partial flux normalization. Incorporates distance
-                    to the star, and assumes 1 AU radius: (Rd[AU]/dist[pc])
-                    in natural units. ((AU2cm)/(distance x pc2cm))^2
-            units (str): input units 'angstrom','micron','meters','cm'
+                    to the star, and assumes 1 AU radius: :math:`R_d[AU]/dist[pc]`
+                    in natural units - :math:`\mbox{AU2cm}^2/(\mbox{distance}\times\mbox{pc2cm})^2`
+            units (str): input units ``angstrom``, ``micron``, ``meters``, ``cm``
+            bands :
+            bulk (bool)
 
         Returns:
-            returns flux of blackbody at fitted temperature.
+            (arr): returns flux of blackbody at fitted temperature.
         """
 
         # CHECK UNITS
         x = lambda_.copy().astype('float32')
-        if units == 'angstrom':
-            x *= 1e-8
-        elif units == 'microns':
-            x *= 1e-4
-        elif units == 'meters':
-            x *= 1e-2
-        elif units == 'cm':
-            x = x
-        else:
-            raise ValueError('Unit was not recognized')
+        x = self.scale_wavelength(x,units)
 
         temp0 = p0[0]
-        # CHECK Args AND NsORMALIZATION
+        # Check Args and normalization
         try:
             su2ea = (p0[1] ** 2) * su2ea1
         except IndexError:
@@ -873,29 +907,30 @@ class SEDTools:
         # TRANSMISSION CURVE
         if bulk:
             const = su2ea * ((2 * _H * _CS ** 2))
-            fluxbb = const / ((x ** 4 * ((np.exp(_H * _CS / (_KB * np.outer(x,
-                                                                            temp0))) - 1).transpose())).transpose())
+            const2 = ((x ** 4 * ((np.exp(_H * _CS / (_KB * np.outer(x,temp0))) - 1).transpose())).transpose())
 
-        elif not bulk:
+            fluxbb = const / const2
+
+        else:
             const = su2ea * ((2 * _H * _CS ** 2) / x ** 4)
             fluxbb = const / (np.exp(_H * _CS / (x * _KB * temp0)) - 1)
 
-            # IF FILTER IS GIVEN, CALCULATES FLUX FROM THROUGH GIVEN
-            # BANDPASS. OTHERWISE RETURNS FLUX ARRAY FROM ALL WAVELENGHTS
-            # GIVEN IN lambda_
+        # IF FILTER IS GIVEN, CALCULATES FLUX FROM THROUGH GIVEN
+        # BANDPASS. OTHERWISE RETURNS FLUX ARRAY FROM ALL WAVELENGHTS
+        # GIVEN IN lambda_
         flux_arr = np.array([])
         if bands is not None:
             for band in bands:
                 # print(band,'bbcalc')
-                pband = eval('self.' + band + 'pband')
+                pband = eval(f'self.{band}pband')
                 xmin, xmax = x.min() * _CM2ANG, x.max() * _CM2ANG  # lambda_.min(), lambda_.max()
                 pb_xmin, pb_xmax = pband.wavelength.min(), pband.wavelength.max()
                 if xmin > pb_xmin:
-                    raise ValueError(
-                        'Sample size too small. Need more on blue end for %s band.' % band)
+                    raise ValueError(f'Sample size too small. Need more on '
+                                     f'blue end for {band} band.')
                 elif xmax < pb_xmax:
-                    raise ValueError(
-                        'Sample size too small. Need more on red end %s band.' % band)
+                    raise ValueError(f'Sample size too small. Need more on '
+                                     f'red end {band} band.')
                 else:
                     pass
                 flux = np.array(self.rsr_flux(pband, x * _CM2ANG, fluxbb))
@@ -907,6 +942,7 @@ class SEDTools:
     def calcRJ_spectrum(self, xarr, yarr):
         r"""
         Calculate Rayleigh-Jeans extension of the input spectrum array
+
         Args:
             xarr (arr): wavelength array
             yarr (arr): flux array
@@ -923,12 +959,14 @@ class SEDTools:
     def modifiedBB(self, lambda_, p0, su2ea1=1, bands=None,
                    units='angstrom', **kwargs):
         r"""
-        Calculates a modified blackbody function given a powerlaw
-        in conjunction with sed.SEDTools.blackbody
+        Calculates a modified blackbody function given a powerlaw in conjunction
+        with :meth:`SEDTools.blackbody`
+
         Args:
             lam0 = wavelength at which emission peaks.
 
         Returns:
+            modified blackbody flux
 
         """
 
@@ -942,39 +980,22 @@ class SEDTools:
         except:
             lam0 = self.W3pband.isoWavelength()
 
-        x = lambda_.copy().astype('float32')
-        x0 = float(lam0)
-        if units == 'angstrom':
-            x *= 1e-8
-            x0 *= 1e-8
-        elif units == 'microns':
-            x *= 1e-4
-            x0 *= 1e-4
-        elif units == 'meters':
-            x *= 1e-2
-            x0 *= 1e-2
-        elif units == 'cm':
-            x = x
-            x0 = x0
-        else:
-            raise ValueError('Unit was not recognized')
+        x = self.scale_wavelength(lambda_.copy().astype('float32'), units)
+        x0 = self.scale_wavelength(float(lam0), units)
 
-            #  temp0 = p0[0]*100.
-        # p0[0] = p0[0]*100.
         # CHECK Args AND NORMALIZATION
         try:
             su2ea = (p0[1] ** 2) * su2ea1
-            # su2ea = (p0[2]**2)*su2ea1
         except:
             su2ea = su2ea1
-        # p0 = np.array(p0[0],p0[
+
         p0 = np.array([p0[0]])
         bbflux = self.blackbody(x, p0, su2ea1=su2ea, bands=bands, units='cm')
 
         mod_arr = np.array([])
         if bands is not None:
             for band in bands:
-                pband = eval('self.' + band + 'pband')
+                pband = eval(f'self.{band}pband')
                 wav = pband.isoWavelength() * 1e-8
                 mod_arr = np.append(mod_arr, (x0 / wav))
         else:
@@ -983,6 +1004,7 @@ class SEDTools:
         # mod_arr = (mod_arr<1).choose(mod_arr,1) # FOR REALLY INEFFICIENT SCATTERING DUST
         mod_arr = mod_arr ** pwr
         flux = bbflux * mod_arr
+
         return flux
 
     def NBlackBody(self, lambda_, p0, su2ea1=1, bands=None,
@@ -992,34 +1014,33 @@ class SEDTools:
 
         This function calculates the combined blackbody radiation spectrum for
         multiple blackbody components, each defined by its temperature and scaling factor.
-        The input parameters (`p0`) should contain pairs of values representing each
+        The input parameters ``p0`` should contain pairs of values representing each
         blackbody's temperature and normalization factor.
 
+        Raises SystemExit if the length of `p0` is not even, indicating
+        incomplete blackbody parameter pairs.
+
         Args:
-            \lambda_ (array-like):
-                Wavelength array over which the blackbody radiation is computed.
-            p0 (list or array-like):
-                A flat list containing pairs of values, where each pair represents
-                [temperature, normalization factor] for one blackbody component.
-                The length of `p0` must be even, as each blackbody requires two parameters.
-            su2ea1 (float, optional):
-                Scaling factor for the unit conversion. Default is 1.
-            bands (array-like, optional):
-                Spectral bands over which to integrate the blackbody spectrum. Default is None.
-            units (str, optional):
-                Wavelength units ('angstrom', 'nm', etc.). Default is 'angstrom'.
-            bulk (bool, optional):
-                If True, performs bulk processing for efficiency. Default is False.
-            kwargs (dict):
-                Additional keyword arguments passed to the `blackbody` function.
+            \lambda_ (arr): Wavelength array over which the blackbody
+                radiation is computed.
+            p0 (list/arr): A flat list containing pairs of values, where each
+                pair represents [temperature, normalization factor] for one
+                blackbody component. The length of ``p0`` must be even, as each
+                blackbody requires two parameters.
+            su2ea1 (float, optional): Scaling factor for the unit conversion.
+                Default is 1.
+            bands (arr, optional): Spectral bands over which to integrate the
+                blackbody spectrum. Default is None.
+            units (str, optional): Wavelength units ('angstrom', 'nm', etc.).
+                Default is 'angstrom'.
+            bulk (bool, optional): If True, performs bulk processing for
+                efficiency. Default is False.
+            kwargs (dict): Additional keyword arguments passed to the
+                :meth:`SEDTools.blackbody` function.
 
         Returns:
-            numpy.ndarray:
-                Combined blackbody spectrum calculated as the sum of individual blackbody components.
-
-        Raises:
-            SystemExit:
-                If the length of `p0` is not even, indicating incomplete blackbody parameter pairs.
+            Combined blackbody spectrum calculated as the sum of individual
+            blackbody components.
         """
 
         if (len(p0) % 2) == 0:
@@ -1047,30 +1068,31 @@ class SEDTools:
         sum of two blackbody radiation spectra. Each blackbody component is
         defined by its temperature and scaling factor, provided in the input parameter `p0`.
 
+        .. note:: This function assumes exactly two blackbody components and
+            requires four parameters in `p0`.
+
         Args:
-            \lambda_ (array-like):
-                Wavelength array over which the blackbody radiation is computed.
-            p0 (list or array-like):
-                A list containing four values: [temperature1, normalization1,
-                temperature2, normalization2]. The first pair is for the first blackbody,
-                and the second pair is for the second blackbody.
-            su2ea1 (float, optional):
-                Scaling factor for the unit conversion. Default is 1.
-            bands (array-like, optional):
-                Spectral bands over which to integrate the blackbody spectrum. Default is None.
-            units (str, optional):
-                Wavelength units ('angstrom', 'nm', etc.). Default is 'angstrom'.
-            bulk (bool, optional):
-                If True, performs bulk processing for efficiency. Default is False.
-            kwargs (dict):
-                Additional keyword arguments passed to the `blackbody` function.
+            \lambda_ (arr): Wavelength array over which the blackbody
+                radiation is computed.
+            p0 (arr/list): A list containing four values;
+                [temperature1, normalization1, temperature2, normalization2].
+                The first pair is for the first blackbody, and the second pair
+                is for the second blackbody.
+            su2ea1 (float, optional):Scaling factor for the unit conversion.
+                Default is 1.
+            bands (arr, optional): Spectral bands over which to integrate the
+                blackbody spectrum. Default is None.
+            units (str, optional): Wavelength units ('angstrom', 'nm', etc.).
+                Default is 'angstrom'.
+            bulk (bool, optional): If True, performs bulk processing for
+                efficiency. Default is False.
+            kwargs (dict): Additional keyword arguments passed to the
+                :meth:`SEDTools.blackbody` function.
 
         Returns:
-            numpy.ndarray:
-                The combined spectrum of the two blackbody components.
+            The combined spectrum of the two blackbody components.
 
-        Notes:
-            - This function assumes exactly two blackbody components and requires four parameters in `p0`.
+
         """
 
         p01, p02 = p0[0:2], p0[2:]
@@ -1081,10 +1103,19 @@ class SEDTools:
 
         return B1 + B2
 
-    def calcBBTemp(self, T0, lamArr, flxArr):  # lam1,lam2,Flx1,Flx2):
-        r"""Calculates the temperature
-        Assumes Flux in units of erg/s/cm2/A and returns temperature in kelvin.
-        to be used in conjunction with Newton-Raphson algorithm
+    def calcBBTemp(self, T0, lamArr, flxArr):
+        """
+        Calculates the temperature of the blackbody flux
+        Assumes Flux in units of :math:`\mbox{erg}/\mbox{cm}^2/s/A` and returns
+        temperature in kelvin.
+        To be used in conjunction with Newton-Raphson algorithm
+
+        Args:
+            T0:
+            lamArr:
+            flxArr:
+
+        Returns:
 
         """
 
@@ -1093,25 +1124,25 @@ class SEDTools:
         Flux1, Flux2 = fA[0], fA[1]
         Ratio = (Flux1 / Flux2) * (l1 / l2) ** 5
         gc = _H * _CS / _KB
-        func = np.exp(gc / (l2 * T0)) - Ratio * np.exp(
-            gc / (l1 * T0)) - 1 + Ratio
+        func = np.exp(gc / (l2 * T0)) - Ratio * np.exp(gc / (l1 * T0)) - 1 + Ratio
         return func
 
     def calcModTemp(self, T0, lam0, lamArr, flxArr):
         r"""
         Calculates the temperature of a modified blackbody with a power law
         assuming the power index has been parametrized and the ratio of two fluxes
-        are taken. The Flux is in erg/s/cm2/A and wavelength in cm. This is to be used
-        in conjunction with a Newton-Raphson/Bisecting algorithm to find zeros for the
-        temperature equation.
+        are taken. The Flux is in :math:`\mbox{erg}/\mbox{cm}^2/s/A` and
+        wavelength in cm. This is to be used in conjunction with a
+        Newton-Raphson/Bisecting algorithm to find zeros for the temperature equation.
 
         Args:
-            T0
-            lam0
-            lamArr
-            flxArr
+            T0 (float): temperature in kelvin
+            lam0 (float): target wavelength
+            lamArr (arr): wavelength array
+            flxArr (arr): flux array
 
         Returns:
+            function
 
 
         """
@@ -1139,24 +1170,20 @@ class SEDTools:
         law.
 
         Args:
-            p0 (arr): Args to be passed to SEDTools.calc_grids.
-            su2ea2 (float): Normalization to be passed to SEDTools.calc_grids.
-            modelinfo (arr): Multi-dimensional array to be passed to :meth: `sed.SEDTools.calc_grids`
+            p0 (arr): Args to be passed to :meth:`SEDTools.calc_grids`.
+            su2ea2 (float): Normalization to be passed to :meth:`SEDTools.calc_grids`.
+            modelinfo (arr): Multi-dimensional array to be passed to
+                :meth:`SEDTools.calc_grids`
             wave (tuple/arr): tuple or array of 2 elements; min and max of
-                wavelength for flux to be calculated.
-                Be consistent with units. (angstroms)
+                wavelength for flux to be calculated. Be consistent with units.
+                (angstroms)
             gridPts (int): Integer value for how many grid points you want
                 returned (aka resolution)
             MegaGridModels (dict): all atmospheric grid models with metallicity,
                 grav, and temperature keys.
 
         Returns:
-            [xphot, fluxphot, slope, yint]
-            xphot: wavelength array
-            fluxphot: photospheric flux sampled/extrapolated at xphot
-            slope: slope of extrapolated Rayleigh-Jeans line
-            yint: y-intercept of Rayleigh-Jeans line obviously,
-            the last two are in log space
+            (tuple): wavelength and photospheric flux arrays
         """
 
         MegaGrid = MegaGridModels
@@ -1205,10 +1232,11 @@ class SEDTools:
         # return [xphot, yphot, slope, yint]
         return xphot, yphot
 
-    def scaleSED2bands(self, scbdlist, usebdlist, yphot,
-                       fluxm, fluxme, synflux):
+    def scaleSED2bands(self, scbdlist, usebdlist, yphot,fluxm, fluxme, synflux):
 
-        r"""Use this to scale the fitted stellar SED to a set of particular bands for whatever reason.
+        r"""
+        Use this to scale the fitted stellar SED to a set of particular bands
+        for whatever reason.
 
         Args:
             scbdlist (arr) : strings of band identifiers to scale the fitted photosphere.
@@ -1269,10 +1297,10 @@ class SEDTools:
             yfluxdat (arr): Flux of the data at wavelengths in xlam to be fit.
             p0 (arr): Initial Args for temperature and stellar radius.
                 Temperature is required, Radius is not.
-            su2ea2 (float): Scaling factor :math:`\frac{R_{sun}^2}{d_{star}^2}`
+            su2ea2 (float): Scaling factor :math:`R_{\mbox{sun}}^2/d_{\mbox{star}}^2`
             modinfo (str): Which model type to use based on (model name, log(g),
                 metallicity) to be used as keys in MegaGrid.
-            magfit (dict): String arrays of band identifiers keyed by 'photmags'
+            magfit (dict): String arrays of band identifiers keyed by ``photmags``
                 (bands used to fit the model) and 'scalemags' (which bands to
                 use to scale the raw stellar flux to observed flux to first order).
             func (obj): Function to use to fit the data.
@@ -1305,8 +1333,9 @@ class SEDTools:
         print('Bands used to scale photosphere: {}'.format(', '.join(mg4scale)))
 
         # SURFACE TO OBSERVED FLUX NORMALIZATION WEIGHTED FROM ERRORS
-        FluxNorm = np.average(Flx2scale / FluxSED,
-                              weights=1. / np.array(Flx2scaleErr))
+        weights = 1. / np.array(Flx2scaleErr)
+        FluxNorm = np.average(Flx2scale / FluxSED, weights=weights)
+
         Rad = np.sqrt(FluxNorm / su2ea2)
         p0 = np.array([p0[0], Rad])  # radius squared
 
@@ -1354,19 +1383,19 @@ class SEDTools:
 
     def calc_temp(self, y, yerr, x, temparr, kw_cor):
         r"""
-        Calculate the ...
+        Calculate the residuals between the input fluxes and predicted
+        fluxes... i think
 
         Args:
-            y (arr) : fluxes
+            y (arr): fluxes
             yerr (arr): uncertaintiy in fluxes
             x (arr): string array denoting bands
             temparr (arr): arrays of temperatures
             kw_cor (dict): stuff from load_wfcorrection
 
         Returns:
-            res: residuals
-            FluxNormed: flux normalized to blackbody fluxes
-            alpha : array of chi2 calculations.
+            residuals, flux normalized to blackbody fluxes, and  array of chi2
+            calculations.
 
         """
         fluxNormed = []
@@ -1388,23 +1417,23 @@ class SEDTools:
         FluxNormed = (alpha * (
                 Predicted.transpose() * kcorList).transpose()).transpose()
         res = np.subtract(FluxNormed, y)
+
         return res, FluxNormed, alpha
 
 
-# DICTIONARY THAT CONTAINS ALL THE DATA IN THE INPUT JSON FILE.
-
-
 class DataLogistics:
-    r""" Set of tools to help with the logistical aspect of identifying the
-    photospheric fit to stellar photometry:
-    - loading data
+    r"""
+    Set of tools to help with the logistical aspect of loading and managing the
+    user input data, empirical stellar colors, and atmospheric grid files.
     """
 
     def __init__(self, jfile=None):
         r"""
+        Instantiate the :class:`sed.DataLogistics` class. It will load all the
+        neceesary data according to the JOSN file
 
         Args:
-            jfile
+            jfile (str/path): JSON Parameterfile path
         """
 
         # PROCESS JSON PARAMETERFILE
@@ -1433,12 +1462,19 @@ class DataLogistics:
     def show_parameterfile(self, indent=3):
         r"""
         Show the contents of the JSON parameterfile
+
+        Args:
+            indent (int): indentation level. Default is 3.
         """
         specs_formatted_str = json.dumps(self.specs, indent=indent)
 
         print(specs_formatted_str)
 
     def print_input_file(self):
+        """
+        Prints the user input file.
+
+        """
 
         print(self.StarsDat)
 
@@ -1450,8 +1486,10 @@ class DataLogistics:
         saturated corrected photometry keywords to standard
         WISE keywords.
 
+        Data is stored in the :attr:`DataLogistics.StarsDat` class attribute.
+
         Unsaturated WISE photometry can be corrected using
-        procedures found in Patel,+2014.
+        procedures found in `Patel,+2014 <https://iopscience.iop.org/article/10.1088/0067-0049/212/1/10>`_.
 
         Need to add in part about self-correcting
         the photometry instead of relying on input.
@@ -1461,15 +1499,10 @@ class DataLogistics:
             sheet_name (str): Which sheet in the file to use. Default is the
                 first one
             changekeys (bool): Whether to replace the WISE saturated corrected
-                photometry keywords to standard WISE keywords."
-
+                photometry keywords to standard WISE keywords.
         """
 
         StarsData = pd.read_excel(starfile, sheet_name=sheet_name)
-        # df = df.transpose().reset_index()
-        # df.columns = df.iloc[0]
-        # StarsData = s.drop(0)
-        #StarsData.reset_index(drop=True, inplace=True)
         StarsData.set_index('MainName', inplace=True)
 
         colnames = StarsData.columns
@@ -1530,13 +1563,14 @@ class DataLogistics:
     def loadEmpiricalData(self, filename):
         r"""
         Loads the empirically derived stellar color data from
-        Pecaut & Mamajek (2012) into EmpDat global dictionary.
+        Pecaut & Mamajek (2012).
 
         *I think this is still incomplete*
 
+        Data is stored in the :attr:`DataLogistics.EmpDat` class attribute.
+
         Args:
             filename (str) : file location of the empirical data.
-
         """
 
         empirical_data = pd.read_csv(filename, sep='\t')
@@ -1554,7 +1588,9 @@ class DataLogistics:
         Load all the unique stellar photospheric models based on
         the input star file and all the options that are needed.
         Everything is sorted in a dictionary with keys of
-        (model, log(g), metallicity).
+        (model, log(g), metallicity) in the :attr:DataLogistics.MegaGrid
+        class variable.
+
         """
         MegaGrid = {}
         allg = np.unique(self.StarsDat['grav'])
@@ -1583,23 +1619,33 @@ class GridModels:
         r"""
         Args:
             grav, met (str,str): gravity and metallity values associated with files
-                for given model --> must match format for the models as indicated in their respective readme files.
-            model (str): Model name. Should be same name as the directory all grids are located.
+                for given model --> must match format for the models as
+                indicated in their respective readme files.
+            model (str): Model name. Should be same name as the directory
+                all grids are located.
             ext (str): Grid file extensions.
 
         Returns:
-            (lam_arr_all, flux_arr_all, temparr): tuple
-            lam_arr_all: (1X N x M)-D numpy array with N wavelength pointsfor
-            each M temperature in the specified grav and met range.
+            (tuple): (lam_arr_all, flux_arr_all, temparr)
 
-            flux_arr_all: (1xNxM)-D numpy array with N flux points from
-            grid model to each wavelength point in lam_arr_all for each M
-            temperature for the specified met and grav.
-            temparr: (1xM) numpy array of sorted temperatures from grid models
-            with values divided by 1000.
-            [wavelength]:  angstroms
-            [flux] :       ergs cm^{-2} s^{-1} A^{-1}
-            [temperature]: Kelvin/1000.
+            lam_arr_all: :math:`(1 \times N \times M)`-D numpy array with
+
+            N-wavelength points for each M temperature in the specified grav
+            and met range.
+
+            flux_arr_all (arr): (1xNxM)-D numpy array with N flux points from
+                grid model to each wavelength point in lam_arr_all for each M
+                temperature for the specified met and grav.
+
+            temparr (arr): (1xM) numpy array of sorted temperatures from grid models
+                with values divided by 1000.
+
+            [wavelength] (arr):  angstroms
+
+            [flux] (arr):  :math:`\mbox{erg}/\mbox{cm}^2/s/A`
+
+            [temperature] (arr): Kelvin/1000.
+
             The grids are unevenly spaced, so filler 'nan's are placed
             in both the wavelength and flux points to make things run smoothly.
 
@@ -1612,12 +1658,10 @@ class GridModels:
             filesGrid = glob.glob(opj(gdir, 'lteNextGen*_%.1f%s' % (met, ext)))
         else:
             grav = grav / 10.
-            filesGrid = glob.glob(
-                opj(gdir, 'lteNextGen*_%.1f_%.1f%s' % (grav, met, ext)))
+            filesGrid = glob.glob(opj(gdir, 'lteNextGen*_%.1f_%.1f%s' % (grav, met, ext)))
 
         if len(filesGrid) < 1:
-            raise ValueError(
-                'There were no files matching your criteria. Try again.')
+            raise ValueError('There were no files matching your criteria. Try again.')
 
         ddat = {}
         tempArr = np.array([])
@@ -1659,8 +1703,8 @@ class GridModels:
                         grid_i1 = np.insert(grid_i1, zr, zr, axis=1)
                         gridnp = np.vstack(([gridi], [grid_i1]))
                     else:
-                        print('Grids are not matched between %d, %d' % (
-                            tempArr[i], tempArr[i + 1]))
+                        print(f'Grids are not matched between {tempArr[i]},'
+                              f'{tempArr[i+1]}')
 
                 i += 2
             else:
@@ -1698,17 +1742,24 @@ class GridModels:
             ext (str): Grid file extensions.
 
         Returns:
-            (lam_arr_all, flux_arr_all, temparr): tuple
+            (tuple); (lam_arr_all, flux_arr_all, temparr)
+
             lam_arr_all: (1X N x M)-D numpy array with N wavelength pointsfor
+
             each M temperature in the specified grav and met range.
 
-            flux_arr_all: (1xNxM)-D numpy array with N flux points from
-            grid model to each wavelength point in lam_arr_all for each M
+            flux_arr_all: (1xNxM)-D numpy array with N flux points from grid
+                model to each wavelength point in lam_arr_all for each M
+
             temperature for the specified met and grav.
+
             temparr: (1xM) numpy array of sorted temperatures from grid models
-            with values divided by 1000.
+                with values divided by 1000.
+
             [wavelength]:  angstroms
-            [flux] :       ergs cm^{-2} s^{-1} A^{-1}
+
+            [flux] : :math:`\mbox{erg}/\mbox{cm}^2/s/A`
+
             [temperature]: Kelvin/1000.
 
          """
@@ -1778,7 +1829,7 @@ class GridModels:
         Use this in order to convert the raw files of the NextGen
         atmospheric models (i.e. ".spec" files) from France Allard's page.
         The raw files are listed as such:
-        low-res: low-resolution (100-25,000A @ 2A) spectra
+        low-res: low-resolution (100-25,000A at 2A) spectra
         (directly from the model iterations)
         Obtained from: ftp://ftp.hs.uni-hamburg.de/pub/outgoing/phoenix
         Spectrum files:
@@ -1794,21 +1845,21 @@ class GridModels:
         with respect to temperature, although selections can be made to transform grids
         of a given solar metallicity and gravity.
 
-        .. warning:: THERE EXIST POINTS IN THE GRIDS THAT CORRESPOND TO THE SAME DATA POINT IN BOTH LAM AND
-        FLUX SPACE -- PROCEED WITH CAUTION IF NAN'S OCCUR
+        .. warning:: THERE EXIST POINTS IN THE GRIDS THAT CORRESPOND TO THE SAME DATA POINT IN BOTH LAM AND FLUX SPACE -- PROCEED WITH CAUTION IF NAN'S OCCUR
 
        Args:
-           met (str/float): "All" will choose files for all metallicities.  Input of a number from the models will select files of that metallicity.
+           met (str/float): "All" will choose files for all metallicities. Input
+            of a number from the models will select files of that metallicity.
            grav: Same as met
            ext: What the original extension of the raw files are. I suggest to keep them as .'spec'
 
        Returns:
            Individual ascii files of the grids, two column of wavelength and
            F_lam as in the raw files.
-           File names: 'lte_temp_grav_met.txt'
-           Flam units: erg/s/cm^2/Angstrom
-           Wavelength: Angstrom
 
+           File names: 'lte_temp_grav_met.txt'
+           Flam units: :math:`\mbox{erg}/\mbox{cm}^2/s/A`
+           Wavelength: Angstrom
         """
 
         conv2ang = 1e8
@@ -2035,10 +2086,10 @@ class Flatbandpass:
         Creates a passband object with a flat response curve
 
         Args:
-            waverange
-            cntr
-            normalize
-            inputUnits
+            waverange (tuple):
+            cntr (float):
+            normalize (float):
+            inputUnits (str):
         """
         if waverange[0] is None or waverange[1] is None:
             raise ValueError(
