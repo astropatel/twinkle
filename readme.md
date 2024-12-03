@@ -5,7 +5,7 @@
 
 ## ReadtheDocs
 
-**Check out the [Twinkle ReadTheDocs Instructure](https://twinkle.readthedocs.io/en/latest/)**
+**Check out the [Twinkle ReadTheDocs Manual](https://twinkle.readthedocs.io/en/latest/)**
 
 ## Introduction
 
