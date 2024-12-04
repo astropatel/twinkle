@@ -6,15 +6,17 @@ TWINKLE!
 
 Introduction
 *************
-*Twinkle* is a Python-based tool that has the ability to calculate the spectral energy distribution (`SED <https://coolwiki.ipac.caltech.edu/index.php/SED_plots_introduction>`_) of a stellar source using empirical photometric data and stellar model grids.
+*Twinkle* is a Python-based tool designed to calculate the spectral energy distribution (`SED <https://coolwiki.ipac.caltech.edu/index.php/SED_plots_introduction>`_) of stellar sources using photometric data and stellar model grids.
 
-*Twinkle* was originally created to help me calculate the excess infrared (IR) flux from a star. The presence of an IR excess is evidence for dust orbiting the star. This dust would have been created by the grinding and collisions of asteroids, usually moved around through the gravitational influence of a larger planetary object -- so basically the presence of an IR excess points to the potential for finding planets. You can check out the published papers from my thesis using this code in `Patel, Metchev, and, Heinze, 2014 <https://iopscience.iop.org/article/10.1088/0067-0049/212/1/10>`_ and `Patel, et al., 2017 <https://iopscience.iop.org/article/10.3847/1538-3881/153/2/54>`_.
+Originally, I developed *Twinkle* to help me characterize excess infrared (IR) flux from stars. The presence of IR excess often indicates dust orbiting the star, likely produced by the grinding and collisions of asteroids, which are typically influenced by the gravity of larger planetary objects. In short, detecting IR excess can suggest the presence of planets. For more details, refer to the published papers from my thesis : `Patel, Metchev, and, Heinze, 2014 <https://iopscience.iop.org/article/10.1088/0067-0049/212/1/10>`_ and `Patel, et al., 2017 <https://iopscience.iop.org/article/10.3847/1538-3881/153/2/54>`_.
 
 Interested in learning more about debris disks? Check out my `blog post <http://cosmicdiary.org/geminiplanetimager/2015/03/04/debris-disks-searching-for-dust-to-find-planets/>`_.
 
-This code base can help you quickly calculate the temperature and location of the dust to first order by fitting the assumed blackbody or modified blackbody function to the broadband excess emission.
+This codebase allows you to quickly estimate the temperature and location of the dust by fitting an assumed blackbody or modified blackbody function to broadband excess emission.
 
-Feel free to fork and contribute. I created the bulk of the code and fitting routines 10 years ago, so there are probably some functions that are outdated and could be replaced by ``scipy`` functions. This will eventually be updated or feel free to fix it and push the changes.
+Feel free to fork and contribute! The core code and fitting routines were created over 10 years ago, so some functions might be outdated and could benefit from using modern ``SciPy`` alternatives. Updates are planned, but contributions are welcome—feel free to fix and push changes.
+
+
 
 
 
